@@ -1,0 +1,2227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cotizador Comercial - Botiax IA</title>
+  <link rel="shortcut icon" href="favicon-botiax.ico" type="image/x-icon" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    input[type=range]::-webkit-slider-thumb { background: #E58B00; }
+    .disabled-card { opacity: 0.4; pointer-events: none; filter: grayscale(1); }
+    
+    .card-item-selected {
+      border-color: #4ade80 !important;
+      box-shadow: 0 0 0 1px #4ade80 !important;
+    }
+    
+
+    .number-stepper { position: relative; display: flex; align-items: stretch; }
+    .number-stepper > input { flex: 1; min-width: 0; padding-right: 2.4rem !important; }
+    .number-stepper-controls { z-index: 20; position: absolute; right: 0; top: 0; bottom: 0; width: 2.1rem; display: flex; flex-direction: column; border-left: 1px solid #1e293b; overflow: hidden; border-radius: 0 .5rem .5rem 0; }
+    .number-stepper-controls button { flex: 1; min-height: 18px; touch-action: manipulation; padding: 0; border: 0; background: #0f172a; color: #94a3b8; font-size: 10px; line-height: 1; cursor: pointer; }
+    .number-stepper-controls button:first-child { border-bottom: 1px solid #1e293b; }
+    .number-stepper-controls button:hover { background: #1e293b; color: #f59e0b; }
+    .number-stepper.disabled-stepper { opacity: .4; filter: grayscale(1); }
+    @media (max-width: 640px) {
+      header > div { gap: .35rem !important; }
+      header img { max-width: 90px; }
+      #header-plan-select { max-width: 112px; font-size: 10px; padding-left: .4rem; padding-right: .4rem; }
+      #btn-reset, #btn-clear { padding-left: .5rem; padding-right: .5rem; font-size: 10px; }
+      #header-monthly-price, #header-setup-price { font-size: 10px; }
+      .number-stepper { width: 100%; min-height: 34px; }
+      .number-stepper-controls { display: flex !important; visibility: visible !important; opacity: 1 !important; width: 2.2rem; }
+      .number-stepper-controls button { display: flex !important; visibility: visible !important; align-items: center; justify-content: center; min-height: 16px; }
+      .number-stepper > input { min-height: 34px; }
+    }
+
+    @media print {
+      body { background: #ffffff !important; color: #0f172a !important; }
+      body * { visibility: hidden !important; }
+      .print-active, .print-active * { visibility: visible !important; }
+      
+      /* Propuesta comercial para cliente */
+      #client-modal.print-active-modal {
+        position: static !important;
+        display: block !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+      }
+      #client-modal.print-active-modal > div {
+        max-width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      #client-modal .print-active { 
+        position: relative !important; 
+        width: 100% !important; 
+        background: #ffffff !important;
+        color: #0f172a !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      /* Desglose Financiero Interno */
+      #tech-modal.print-active-modal {
+        position: static !important;
+        display: block !important;
+        background: #020617 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+      }
+      #tech-modal.print-active-modal > div {
+        max-width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #0f172a !important;
+        color: #f8fafc !important;
+      }
+      #tech-modal .print-active {
+        position: relative !important;
+        width: 100% !important;
+        background: #0f172a !important;
+        color: #f8fafc !important;
+        padding: 1.5cm !important;
+        margin: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      @page { margin: 1cm; size: auto; }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-30 print:hidden">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center space-x-3">
+        <img src="botiaxlogonaranja.png" alt="Botiax" class="h-10 w-auto" onerror="this.src='https://via.placeholder.com/160x45/0f172a/E58B00?text=BOTIAX+IA'">
+        <span class="text-slate-600 font-bold text-lg">|</span>
+        <img src="fit.png" alt="FIT" class="h-9 w-auto" onerror="this.src='https://via.placeholder.com/100x40/0f172a/ffffff?text=FIT'">
+        <span class="text-xs font-semibold px-2.5 py-1 bg-amber-500/10 text-amber-500 rounded-full border border-amber-500/20">Cotizador Oficial</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-[10px] text-slate-500 hidden sm:block">Plan</label>
+        <select id="header-plan-select" onchange="applyPlan(this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-200 focus:outline-none focus:border-amber-500">
+          <option value="custom">Personalizado</option>
+          <option value="base">Base</option>
+          <option value="starter">Starter</option>
+          <option value="grow">Grow</option>
+          <option value="pro">Pro</option>
+          <option value="corporate">Corporate</option>
+        </select>
+        <div class="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800">
+          <div class="text-[10px] leading-tight"><span class="text-slate-500 block">Mensual</span><span id="header-monthly-price" class="font-bold text-amber-400">USD 0</span></div>
+          <div class="w-px h-6 bg-slate-800"></div>
+          <div class="text-[10px] leading-tight"><span class="text-slate-500 block">Setup</span><span id="header-setup-price" class="font-bold text-amber-400">USD 0</span></div>
+        </div>
+        <button id="btn-reset" onclick="resetCalculator()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all border border-red-500/20 flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        Reiniciar
+        </button>
+        <button id="btn-clear" onclick="clearCalculator()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-700/50 text-slate-300 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/40 transition-all border border-slate-700 flex items-center gap-1">
+          Limpiar
+        </button>
+    </div>
+  </header>
+
+  <!-- Section 1: Visual Plan Selector Card Banner -->
+  <section class="max-w-7xl mx-auto px-4 pt-6 pb-2 w-full print:hidden">
+    <div class="mb-3">
+      <h2 class="text-xs font-bold text-amber-500 uppercase tracking-wider">Selección de Planes Oficiales</h2>
+      <p class="text-xs text-slate-400">Seleccioná un plan base o creá una configuración a medida.</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3" id="plan-cards-container">
+      <div id="card-plan-base" onclick="applyPlan('base')" class="cursor-pointer bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-xl p-3 flex flex-col justify-between transition-all">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Básico</span>
+          <h3 class="text-sm font-bold text-white">Plan Base</h3>
+          <p class="text-[11px] text-slate-400 mt-1">Sin IA, 2 Lic, 1 canal standard a elección, 200 conv., 2 Auto</p>
+        </div>
+        <div class="mt-4 pt-2 border-t border-slate-800/80">
+          <span class="text-[10px] text-slate-500 block">Estimado desde</span>
+          <span id="card-price-base" class="text-base font-extrabold text-amber-500">USD 59</span>
+        </div>
+      </div>
+
+      <div id="card-plan-starter" onclick="applyPlan('starter')" class="cursor-pointer bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-xl p-3 flex flex-col justify-between transition-all">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Inicia tu IA</span>
+          <h3 class="text-sm font-bold text-white">Starter</h3>
+          <p class="text-[11px] text-slate-400 mt-1">IA Starter, 2 Lic, 1 canal standard a elección, 200 conv.</p>
+        </div>
+        <div class="mt-4 pt-2 border-t border-slate-800/80">
+          <span class="text-[10px] text-slate-500 block">Estimado desde</span>
+          <span id="card-price-starter" class="text-base font-extrabold text-amber-500">USD 99</span>
+        </div>
+      </div>
+
+      <div id="card-plan-grow" onclick="applyPlan('grow')" class="cursor-pointer bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-xl p-3 flex flex-col justify-between transition-all">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Crecimiento</span>
+          <h3 class="text-sm font-bold text-white">Grow</h3>
+          <p class="text-[11px] text-slate-400 mt-1">IA Grow, 5 Lic, 3 canales standard a elección, 500 conv.</p>
+        </div>
+        <div class="mt-4 pt-2 border-t border-slate-800/80">
+          <span class="text-[10px] text-slate-500 block">Estimado desde</span>
+          <span id="card-price-grow" class="text-base font-extrabold text-amber-500">USD 199</span>
+        </div>
+      </div>
+
+      <div id="card-plan-pro" onclick="applyPlan('pro')" class="cursor-pointer bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-xl p-3 flex flex-col justify-between transition-all">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Avanzado</span>
+          <h3 class="text-sm font-bold text-white">Pro</h3>
+          <p class="text-[11px] text-slate-400 mt-1">IA Pro, 8 Lic, 3 canales standard + 1 WPP, 500 + 500 conv.</p>
+        </div>
+        <div class="mt-4 pt-2 border-t border-slate-800/80">
+          <span class="text-[10px] text-slate-500 block">Estimado desde</span>
+          <span id="card-price-pro" class="text-base font-extrabold text-amber-500">USD 299</span>
+        </div>
+      </div>
+
+      <div id="card-plan-corporate" onclick="applyPlan('corporate')" class="cursor-pointer bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-xl p-3 flex flex-col justify-between transition-all">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Corporativo</span>
+          <h3 class="text-sm font-bold text-white">Corporate</h3>
+          <p class="text-[11px] text-slate-400 mt-1">IA Corporate, 12 Lic, 3 canales standard + 1 WPP, 1000 + 1000 conv.</p>
+        </div>
+        <div class="mt-4 pt-2 border-t border-slate-800/80">
+          <span class="text-[10px] text-slate-500 block">Estimado desde</span>
+          <span id="card-price-corporate" class="text-base font-extrabold text-amber-500">USD 399</span>
+        </div>
+      </div>
+
+      <!-- Tarjeta Plan Personalizado -->
+      <div id="card-plan-custom" onclick="applyPlan('custom')" class="cursor-pointer bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-xl p-3 flex flex-col justify-between transition-all">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400">A Medida</span>
+          <h3 class="text-sm font-bold text-white">Personalizado</h3>
+          <p class="text-[11px] text-slate-400 mt-1">Configuración manual de módulos y servicios</p>
+        </div>
+        <div class="mt-4 pt-2 border-t border-slate-800/80">
+          <span class="text-[10px] text-slate-500 block">Cotización</span>
+          <span class="text-base font-extrabold text-amber-500">A Medida</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content Grid -->
+  <main class="max-w-7xl mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow w-full print:hidden">
+
+    <!-- Left Column: Inputs Form -->
+    <div class="lg:col-span-8 space-y-5">
+
+      <!-- Datos del Cliente y Asesor -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-4">
+        <h2 class="text-xs font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+          Información de Partes
+        </h2>
+        
+        <div class="space-y-2">
+          <span class="text-[11px] font-semibold text-slate-300 block border-b border-slate-800 pb-1">Datos del Cliente</span>
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Nombre de Empresa</label>
+              <input type="text" id="client-company" oninput="recalculate()" placeholder="Empresa S.A." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Persona Responsable</label>
+              <input type="text" id="client-contact" oninput="recalculate()" placeholder="Juan Pérez" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Correo Electrónico</label>
+              <input type="email" id="client-email" oninput="recalculate()" placeholder="contacto@cliente.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Teléfono Contacto</label>
+              <input type="text" id="client-phone" oninput="recalculate()" placeholder="+54 9 11..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-2 pt-2">
+          <span class="text-[11px] font-semibold text-slate-300 block border-b border-slate-800 pb-1">Ejecutivo Comercial Botiax</span>
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Representante Comercial</label>
+              <select id="seller-select" onchange="recalculate()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+                <option value="valeria">Valeria Espinosa (vespinosa@botiax.com)</option>
+                <option value="adriana">Adriana Vazquez (avazquez@botiax.com)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Teléfono Asesor (Opcional)</label>
+              <input type="text" id="seller-phone" oninput="recalculate()" placeholder="+54 9 ..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Mercado Destino</label>
+              <select id="market-select" onchange="recalculate()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+                <option value="Argentina">Argentina</option>
+                <option value="Colombia">Colombia</option>
+                <option value="Estados Unidos">Estados Unidos</option>
+                <option value="Brasil">Brasil</option>
+                <option value="México">México</option>
+                <option value="Resto de Latinoamérica">Resto de Latinoamérica</option>
+                <option value="Chile">Chile</option>
+                <option value="España">España</option>
+                <option value="Perú">Perú</option>
+                <option value="Otros">Otros</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Validez de Cotización (Días)</label>
+              <input type="number" id="quote-validity-days" min="1" value="7" oninput="recalculate()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1. Motor IA y Licencias -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+        <h2 class="text-xs font-bold text-amber-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          1. Asistente IA & Licencias
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div id="box-ia-level" class="p-1 rounded-xl transition-all border border-transparent">
+            <label class="block text-xs text-slate-400 mb-1">Nivel de Asistente IA</label>
+            <select id="ia-level" onchange="onIaLevelChange()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+              <option value="none">Sin Asistente Virtual IA ($0 USD/mes)</option>
+              <option value="starter">IA STARTER ($30 USD/mes) - Setup $60 - 5 Días Hb.</option>
+              <option value="grow">IA GROW ($60 USD/mes) - Setup $120 - 7 Días Hb.</option>
+              <option value="pro">IA PRO ($100 USD/mes) - Setup $200 - 10 Días Hb.</option>
+              <option value="corporate">IA CORPORATE ($150 USD/mes) - Setup $300 - 15 Días Hb.</option>
+            </select>
+          </div>
+          <div id="box-qty-licencias" class="p-1 rounded-xl transition-all border border-transparent">
+            <label class="block text-xs text-slate-400 mb-1">Licencias de Agente / Usuario ($15 USD c/u)</label>
+            <input type="number" id="qty-licencias" min="1" value="1" oninput="validateAndRecalculate()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Canales & Conversaciones -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-4">
+        <div>
+          <h2 class="text-xs font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            2. Canales y Conversaciones
+          </h2>
+          <p class="text-[10px] text-slate-500 mt-1">Los canales estándar comparten una única bolsa de conversaciones. WhatsApp se administra por separado.</p>
+        </div>
+
+        <!-- Canales estándar -->
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-xs font-semibold text-slate-200">Canales estándar</span>
+              <p class="text-[10px] text-slate-500">$25 USD/mes por canal</p>
+            </div>
+            <span id="std-channel-count-badge" class="text-[10px] font-mono bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">0 canales</span>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div id="box-chan-webchat" class="bg-slate-900 border border-slate-800 rounded-xl p-2.5 transition-all">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-200">Web Chat</span>
+                <span class="text-[10px] text-slate-500">$25</span>
+              </div>
+              <label class="block text-[10px] text-slate-400 mt-2 mb-1">Cantidad</label>
+              <input type="number" id="qty-chan-webchat" min="0" value="0" oninput="onStandardChannelQtyChange()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            </div>
+
+            <div id="box-chan-ig" class="bg-slate-900 border border-slate-800 rounded-xl p-2.5 transition-all">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-200">Instagram</span>
+                <span class="text-[10px] text-slate-500">$25</span>
+              </div>
+              <label class="block text-[10px] text-slate-400 mt-2 mb-1">Cantidad</label>
+              <input type="number" id="qty-chan-ig" min="0" value="0" oninput="onStandardChannelQtyChange()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            </div>
+
+            <div id="box-chan-fb" class="bg-slate-900 border border-slate-800 rounded-xl p-2.5 transition-all">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-200">Facebook</span>
+                <span class="text-[10px] text-slate-500">$25</span>
+              </div>
+              <label class="block text-[10px] text-slate-400 mt-2 mb-1">Cantidad</label>
+              <input type="number" id="qty-chan-fb" min="0" value="0" oninput="onStandardChannelQtyChange()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            </div>
+
+            <div id="box-chan-email" class="bg-slate-900 border border-slate-800 rounded-xl p-2.5 transition-all">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-200">Correo electrónico</span>
+                <span class="text-[10px] text-slate-500">$25</span>
+              </div>
+              <label class="block text-[10px] text-slate-400 mt-2 mb-1">Cantidad</label>
+              <input type="number" id="qty-chan-email" min="0" value="0" oninput="onStandardChannelQtyChange()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            </div>
+
+            <div id="box-chan-api" class="bg-slate-900 border border-slate-800 rounded-xl p-2.5 transition-all">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-200">Mensajería API</span>
+                <span class="text-[10px] text-slate-500">$25</span>
+              </div>
+              <label class="block text-[10px] text-slate-400 mt-2 mb-1">Cantidad</label>
+              <input type="number" id="qty-chan-api" min="0" value="0" oninput="onStandardChannelQtyChange()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            </div>
+          </div>
+
+          <div class="border-t border-slate-800 pt-3">
+            <div class="flex justify-between items-center text-[10px] text-slate-400 mb-1">
+              <label>Conversaciones Mensuales Estándar (bolsa compartida)</label>
+              <span id="slider-val-std" onclick="openEditModal('std', 'Conversaciones Estándar')" class="font-bold text-amber-500 font-mono cursor-pointer hover:underline bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">0 ✏️</span>
+            </div>
+            <input type="range" id="qty-tkt-std" min="0" max="5000" value="0" step="10" oninput="onSliderRangeInput('std', this.value)" class="w-full accent-amber-500 cursor-pointer h-1.5 bg-slate-900 rounded-lg">
+            <p class="text-[10px] text-slate-500 mt-1">El volumen se distribuye entre todos los canales estándar seleccionados.</p>
+          </div>
+        </div>
+
+        <!-- WhatsApp -->
+        <div id="box-chan-wpp" class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-3 transition-all">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-xs font-semibold text-slate-200">WhatsApp API</span>
+              <p class="text-[10px] text-slate-500">$25 USD/mes por línea/canal</p>
+            </div>
+            <span id="wpp-channel-count-badge" class="text-[10px] font-mono bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">0 líneas</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Cantidad de líneas WhatsApp</label>
+              <input type="number" id="qty-chan-wpp" min="0" value="0" oninput="onWppChannelQtyChange()" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+            </div>
+
+            <div>
+              <div class="flex justify-between items-center text-[10px] text-slate-400 mb-1">
+                <label>Conversaciones Mensuales WhatsApp</label>
+                <span id="slider-val-wpp" onclick="openEditModal('wpp', 'Conversaciones WhatsApp')" class="font-bold text-amber-500 font-mono cursor-pointer hover:underline bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">0 ✏️</span>
+              </div>
+              <input type="range" id="qty-tkt-wpp" min="0" max="5000" value="0" step="10" oninput="onSliderRangeInput('wpp', this.value)" class="w-full accent-amber-500 cursor-pointer h-1.5 bg-slate-900 rounded-lg">
+              <p id="wpp-rate-help" class="text-[10px] text-slate-500 mt-1">El precio depende del mercado y del nivel de IA.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. WhatsApp Marketing y Plantillas -->
+      <div id="wpp-marketing-card" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-3 transition-all disabled-card">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>
+            3. Campañas WhatsApp & Plantillas Adicionales
+          </h2>
+          <span id="wpp-lock-msg" class="text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded">Requiere Canal WhatsApp Activo</span>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div id="box-wpp-mkt-module" class="space-y-2 p-2 rounded-xl border border-transparent transition-all">
+            <label class="inline-flex items-center space-x-2 cursor-pointer">
+              <input type="checkbox" id="chk-wpp-mkt" onchange="validateAndRecalculate()" class="rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0">
+              <span class="text-xs font-medium text-slate-200">Módulo WSP MKT ($15 USD)</span>
+            </label>
+            <p class="text-[10px] text-slate-500">Incluye 100 envíos iniciales</p>
+            
+            <div class="space-y-1">
+              <div class="flex justify-between items-center text-[10px] text-slate-400">
+                <label>Total Envíos Salientes Mkt</label>
+                <span id="slider-val-wpp-mkt" onclick="openEditModal('wpp_mkt', 'WhatsApp Marketing')" class="font-bold text-amber-500 font-mono cursor-pointer hover:underline bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">0 ✏️</span>
+              </div>
+              <input type="range" id="qty-wpp-mkt-sends" min="0" max="1000" value="0" step="10" oninput="onWppMktInput(this.value)" class="w-full accent-amber-500 cursor-pointer h-1.5 bg-slate-950 rounded-lg">
+            </div>
+          </div>
+
+          <div id="box-plantillas-mkt" class="p-1 rounded-xl transition-all border border-transparent">
+            <label class="block text-xs text-slate-400 mb-1">Plantillas Mkt Adicionales (<span id="plantilla-mkt-rate-label">$0.0989</span> c/u)</label>
+            <input type="number" id="qty-plantillas-mkt" min="0" value="0" oninput="recalculate()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition-all">
+          </div>
+
+          <div id="box-plantillas-ut" class="p-1 rounded-xl transition-all border border-transparent">
+            <label class="block text-xs text-slate-400 mb-1">Plantillas Utility Adicionales (<span id="plantilla-ut-rate-label">$0.0544</span> c/u)</label>
+            <input type="number" id="qty-plantillas-ut" min="0" value="0" oninput="recalculate()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition-all">
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Automatizaciones e Integraciones -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
+        <h2 class="text-xs font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a2 2 0 01-2 2 2 2 0 01-2-2V4zM4 7a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7z"></path></svg>
+          4. Automatizaciones e Integraciones
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div id="box-qty-auto" class="p-1 rounded-xl transition-all border border-transparent">
+            <label class="block text-xs text-slate-400 mb-1">Automatizaciones ($5 USD/mes c/u)</label>
+            <input type="number" id="qty-auto" min="0" value="0" oninput="validateAndRecalculate()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition-all">
+          </div>
+
+          <div id="box-int-email" class="integrations-container p-1 rounded-xl transition-all border border-transparent">
+            <label class="block text-xs text-slate-400 mb-1">Envío Correo desde Asistente IA ($15 USD/mes c/u)</label>
+            <input type="number" id="qty-int-email" min="0" value="0" oninput="onIntegrationChange()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition-all">
+          </div>
+
+          <div id="box-int-sheets" class="integrations-container p-1 rounded-xl transition-all border border-transparent">
+            <label class="block text-xs text-slate-400 mb-1">Integración Sheet / Excel Online ($25 USD/mes c/u)</label>
+            <input type="number" id="qty-int-sheets" min="0" value="0" oninput="onIntegrationChange()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition-all">
+          </div>
+
+          <div id="box-int-custom" class="integrations-container sm:col-span-1 order-5 p-1 rounded-xl transition-all border border-transparent">
+            <label class="block text-xs text-slate-400 mb-1">Integraciones a Medida ($120 USD/mes c/u)</label>
+            <input type="number" id="qty-int-custom" min="0" value="0" oninput="onIntegrationChange()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition-all">
+          </div>
+
+          <div id="box-tn-cat" class="integrations-container sm:col-span-1 order-3 bg-slate-950 border border-slate-800 p-3 rounded-xl transition-all">
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-xs font-medium text-slate-300">Tienda Nube Catálogo (Escala por productos)</label>
+              <span id="tn-cat-price-label" class="text-xs text-amber-500 font-bold">$0.00 USD/mes</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <input type="number" id="qty-tn-prods" min="0" value="0" oninput="onIntegrationChange()" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+              </div>
+              <p class="text-[10px] text-slate-500 flex items-center">
+                * Mín. 15 prods = $30 | 16-30 = $1.83/u | 31-50 = $1.60/u | 51-80 = $1.25/u | >80 = $1.00/u
+              </p>
+            </div>
+          </div>
+
+          <div id="box-tn-posventa" class="integrations-container order-4 p-1 rounded-xl transition-all border border-transparent">
+            <label class="block text-xs text-slate-400 mb-1">Tienda Nube Posventa ($25 USD/mes)</label>
+            <select id="sel-tn-posventa" onchange="onIntegrationChange()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition-all">
+              <option value="0">No incluir</option>
+              <option value="1">Sí ($25 USD/mes)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Setup & Servicios -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
+        <h2 class="text-xs font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+          5. Capacitaciones y Servicios Adicionales
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div id="box-cap-equipo" class="p-1 rounded-xl transition-all border border-transparent">
+            <label class="block text-xs text-slate-400 mb-1">Capacitación Equipo (Horas) - $25/hs</label>
+            <input type="number" id="qty-cap-equipo" min="0" value="0" oninput="validateAndRecalculate()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 transition-all">
+          </div>
+
+          <div id="box-cap-admin" class="p-1 rounded-xl transition-all border border-transparent">
+            <label class="block text-xs text-slate-400 mb-1">Capacitación Admin (Horas) - $25/hs</label>
+            <input type="number" id="qty-cap-admin" min="0" value="0" oninput="validateAndRecalculate()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 transition-all">
+          </div>
+
+          <div id="box-config-inicial" class="hidden">
+            <label>
+              <input type="checkbox" id="chk-config-inicial" checked disabled>
+            </label>
+          </div>
+
+          <div id="box-seguimiento-hs" class="p-1 rounded-xl transition-all border border-transparent">
+            <label class="block text-xs text-slate-400 mb-1">Seguimiento Plataforma (Hs/mes)</label>
+            <select id="qty-seguimiento-hs" onchange="recalculate()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500 transition-all">
+              <option value="0">Sin seguimiento ($0 USD/mes)</option>
+              <option value="1">1 hora ($30 USD/mes)</option>
+              <option value="2">2 horas ($60 USD/mes)</option>
+              <option value="3">3 horas ($90 USD/mes)</option>
+              <option value="4">4 horas ($120 USD/mes)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Notas de la Propuesta -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
+        <h2 class="text-xs font-bold text-amber-500 uppercase tracking-wider">6. Notas de la Propuesta</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Nota comercial</label>
+            <textarea id="quote-note" rows="4" oninput="recalculate()" placeholder="Escribí una nota para el cliente..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500 resize-y"></textarea>
+            <p class="text-[10px] text-slate-500 mt-1">Aparece en la vista previa antes del precio y en el texto de WhatsApp.</p>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Término y condición adicional</label>
+            <textarea id="quote-term-note" rows="4" oninput="recalculate()" placeholder="Escribí un término o condición adicional..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500 resize-y"></textarea>
+            <p class="text-[10px] text-slate-500 mt-1">Se agrega como un punto más en Términos y Condiciones.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Quote Summary & Controls -->
+    <div class="lg:col-span-4 space-y-6">
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl sticky top-20 space-y-4">
+        
+        <div>
+          <h2 class="text-sm font-bold text-slate-100 flex items-center justify-between">
+            <span>Resumen de Cotización</span>
+            <span id="impl-time-badge" class="text-[11px] font-normal bg-slate-800 text-amber-400 px-2 py-0.5 rounded-full">1 Día Hábil</span>
+          </h2>
+          <!-- Nombre del Plan Seleccionado -->
+          <span id="summary-selected-plan" class="text-xs font-semibold text-amber-500 block mt-0.5">Plan Personalizado</span>
+        </div>
+
+        <div id="min-req-warning" class="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-xs space-y-1">
+          <p class="font-semibold flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            Faltan datos obligatorios:
+          </p>
+          <ul class="list-disc list-inside text-[11px] space-y-0.5 text-red-300">
+            <li id="warn-lic">Al menos 1 Licencia</li>
+            <li id="warn-channel">Al menos 1 Canal con conversaciones (1+)</li>
+          </ul>
+        </div>
+
+        <!-- Sliders de Descuentos -->
+        <div id="pricing-results" class="space-y-3">
+
+          <div id="container-slider-discount-comm" class="space-y-1">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400">Descuento especial FIT:</span>
+              <span id="commercial-discount-val" class="font-bold text-amber-500">0%</span>
+            </div>
+            <input type="range" id="slider-discount-comm" min="0" max="30" value="0" step="1" oninput="recalculate()" class="w-full accent-amber-500 cursor-pointer h-1.5 bg-slate-950 rounded-lg">
+          </div>
+
+          <div id="container-slider-bonif-setup" class="space-y-1">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400">Bonificación de Setup:</span>
+              <span id="setup-bonif-val" class="font-bold text-amber-500">0%</span>
+            </div>
+            <input type="range" id="slider-bonif-setup" min="0" max="50" value="0" step="1" oninput="recalculate()" class="w-full accent-amber-500 cursor-pointer h-1.5 bg-slate-950 rounded-lg">
+          </div>
+
+          <div class="space-y-1 hidden">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400">Comisión Partner (Interno):</span>
+              <span id="partner-comm-val" class="font-bold text-slate-300">0%</span>
+            </div>
+            <input type="range" id="slider-partner-comm" min="0" max="30" value="0" step="1" oninput="recalculate()" class="w-full accent-slate-500 cursor-pointer h-1.5 bg-slate-950 rounded-lg">
+          </div>
+
+          <hr class="border-slate-800">
+
+          <!-- Monthly Final Output -->
+          <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
+            <span class="text-[11px] text-slate-400 uppercase tracking-wider block font-semibold">INVERSIÓN MENSUAL</span>
+            <div class="flex items-baseline gap-2">
+              <span id="display-monthly-final" class="text-2xl font-extrabold text-amber-500">$0.00 USD</span>
+              <span id="display-monthly-original" class="text-xs text-slate-500 line-through"></span>
+            </div>
+            <p id="display-monthly-discount-text" class="text-[10px] text-emerald-400 font-medium"></p>
+          </div>
+
+          <!-- Setup Output -->
+          <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
+            <span class="text-[11px] text-slate-400 uppercase tracking-wider block font-semibold">SETUP & INICIO (PAGO ÚNICO)</span>
+            <div class="flex items-baseline gap-2">
+              <span id="display-setup-final" class="text-xl font-bold text-slate-200">$0.00 USD</span>
+              <span id="display-setup-original" class="text-xs text-slate-500 line-through"></span>
+            </div>
+            <p id="display-setup-bonif-text" class="text-[10px] text-emerald-400 font-medium"></p>
+          </div>
+
+          <!-- Margin Guard Alert & Control Panel -->
+          <div id="margin-control-block" class="bg-slate-950 border border-slate-800 p-3 rounded-xl space-y-1.5 hidden">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Control de Margen Interno</span>
+              <span id="margin-status-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">OK</span>
+            </div>
+            <div class="text-xs space-y-0.5 text-slate-300">
+              <div class="flex justify-between">
+                <span class="text-slate-500">Costo Directo Mensual:</span>
+                <span id="margin-cost-val" class="font-mono text-slate-300">$0.00 USD</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-500">Comisión Partner:</span>
+                <span id="margin-partner-val" class="font-mono text-amber-400">$0.00 USD</span>
+              </div>
+              <div class="flex justify-between border-t border-slate-800/80 pt-1">
+                <span class="text-slate-500">Margen Neto Operativo:</span>
+                <span id="current-margin-val" class="font-bold text-emerald-400 font-mono">$0.00 USD (0.0%)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="space-y-2 pt-2">
+            <button id="btn-preview-prop" onclick="openClientProposalModal()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 px-4 rounded-xl transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+              Vista Previa Propuesta
+            </button>
+
+            <button id="btn-copy-wpp" onclick="copyQuickSummary()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 px-4 rounded-xl transition-all text-xs flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+              Copiar Texto WhatsApp
+            </button>
+
+            <button onclick="openTechBreakdownModal()" class="w-full bg-slate-950 hover:bg-slate-800 text-amber-500 border border-amber-500/30 font-medium py-2 px-4 rounded-xl transition-all text-xs flex items-center justify-center gap-2 hidden">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              Desglose Técnico Financiero
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- MODAL: Edición Manual de Conversaciones -->
+  <div id="edit-conv-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl">
+      <h3 class="text-sm font-bold text-amber-500 uppercase tracking-wider" id="edit-modal-title">Editar Cantidad</h3>
+      <p class="text-xs text-slate-400">Ingresá el número deseado para este elemento.</p>
+      
+      <div>
+        <input type="number" id="edit-conv-input" min="0" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500 font-mono">
+        <p id="edit-conv-error" class="text-[11px] text-red-400 mt-1 hidden font-semibold"></p>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeEditModal()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">Cancelar</button>
+        <button onclick="confirmEditModal()" class="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 1: Proposal Printable Page -->
+  <div id="client-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div class="bg-white text-slate-900 rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden my-auto border border-slate-200">
+      
+      <div class="bg-slate-100 px-6 py-3 border-b border-slate-200 flex justify-between items-center print:hidden">
+        <span class="text-xs font-semibold text-slate-600">Vista Previa - Propuesta Comercial</span>
+        <div class="flex gap-2">
+          <button onclick="printProposal()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+            Imprimir / Guardar PDF
+          </button>
+          <button onclick="closeClientProposalModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold">Cerrar</button>
+        </div>
+      </div>
+
+      <div id="printable-quote" class="p-8 sm:p-10 space-y-6 bg-white text-slate-900">
+        <div class="flex justify-between items-start border-b border-slate-200 pb-6">
+          <div class="flex items-center gap-3">
+            <img src="botiaxlogonaranja.png" alt="Botiax IA" class="h-10 w-auto mb-1" onerror="this.src='https://via.placeholder.com/160x45/ffffff/E58B00?text=BOTIAX+IA'">
+            <span class="text-slate-300 font-bold text-lg">|</span>
+            <img src="fit.png" alt="FIT" class="h-9 w-auto" onerror="this.src='https://via.placeholder.com/100x40/ffffff/0f172a?text=FIT'">
+          </div>
+          <div class="text-right text-xs text-slate-500 space-y-1">
+            <p class="font-extrabold text-slate-800 tracking-wide text-sm">PROPUESTA COMERCIAL BOTIAX</p>
+            <p id="prop-date">Fecha: -</p>
+            <p id="prop-validity">Validez: 7 Días</p>
+          </div>
+        </div>
+
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-2 gap-4 text-xs">
+          <div class="space-y-1">
+            <span class="text-slate-400 block text-[10px] uppercase font-semibold">Datos del Cliente:</span>
+            <p class="font-bold text-slate-800 text-sm" id="prop-client-company"></p>
+            <p class="text-slate-700 font-medium" id="prop-client-contact"></p>
+            <p class="text-slate-600" id="prop-client-email"></p>
+            <p class="text-slate-600" id="prop-client-phone"></p>
+          </div>
+          <div class="text-right space-y-1">
+            <span class="text-slate-400 block text-[10px] uppercase font-semibold">Ejecutivo Comercial:</span>
+            <p class="font-bold text-slate-800 text-sm" id="prop-seller-name">-</p>
+            <p class="text-slate-600" id="prop-seller-email">-</p>
+            <p class="text-slate-600" id="prop-seller-phone"></p>
+            <a href="https://www.botiax.com" target="_blank" class="text-amber-600 font-semibold text-[11px] hover:underline block pt-0.5">www.botiax.com</a>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-amber-600 border-b border-slate-200 pb-1" id="prop-plan-header">RESUMEN DE LA PROPUESTA BOTIAX: PLAN PERSONALIZADO</h4>
+          
+          <div id="prop-plan-items-block" class="space-y-1">
+            <table class="w-full text-xs text-left">
+              <thead>
+                <tr class="text-slate-400 text-[10px] uppercase border-b border-slate-100">
+                  <th class="py-1">Ítem / Componente</th>
+                  <th class="py-1 text-right">Especificación</th>
+                </tr>
+              </thead>
+              <tbody id="prop-base-items-body" class="divide-y divide-slate-100 text-slate-700">
+              </tbody>
+            </table>
+          </div>
+
+          <div id="prop-base-features-box" class="bg-amber-50/60 border border-amber-200/80 p-3 rounded-xl text-xs space-y-1.5">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-amber-800 block">Incluido en el Plan Base Selección</span>
+            <div id="prop-base-features-list" class="text-[11px] text-amber-950/80 leading-relaxed"></div>
+          </div>
+
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Detalle del Setup de Inicio e Implementación</span>
+            <p class="text-slate-700" id="prop-setup-items-text">-</p>
+          </div>
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs flex justify-between items-center text-amber-900">
+          <span class="font-medium">Tiempo Estimado de Implementación:</span>
+          <span id="prop-impl-time" class="font-bold bg-amber-200 px-2.5 py-0.5 rounded-full text-amber-950">1 Día Hábil</span>
+        </div>
+
+        <div id="prop-note-box" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs hidden">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Nota comercial</span>
+          <p id="prop-note-text" class="text-slate-700 whitespace-pre-line"></p>
+        </div>
+
+        <div class="border-t-2 border-slate-900 pt-4 grid grid-cols-2 gap-4">
+          <div class="bg-slate-900 text-white p-4 rounded-xl space-y-1">
+            <span class="text-[10px] uppercase tracking-wider text-amber-400 font-semibold block">INVERSIÓN MENSUAL</span>
+            <div class="flex items-baseline gap-2">
+              <span id="prop-monthly-price" class="text-2xl font-extrabold text-amber-400">$0 USD</span>
+              <span id="prop-monthly-orig" class="text-xs text-slate-400 line-through"></span>
+            </div>
+          </div>
+
+          <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 space-y-1">
+            <span class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold block">SETUP & INICIO (PAGO ÚNICO)</span>
+            <div class="flex items-baseline gap-2">
+              <span id="prop-setup-price" class="text-xl font-bold text-slate-800">$0 USD</span>
+              <span id="prop-setup-orig" class="text-xs text-slate-400 line-through"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-200 pt-4 space-y-2 text-[10px] text-slate-600">
+          <p class="font-bold text-slate-800 uppercase tracking-wider text-[11px]">Términos y Condiciones Generales:</p>
+          <ul class="list-disc list-inside space-y-1 leading-relaxed text-slate-600">
+            <li>Precios expresados en Dólares Estadounidenses (USD), no incluyen impuestos locales.</li>
+            <li>Facturación mensual por adelantado. Cancelación previa notificación de 30 días.</li>
+            <li>Los tickets y plantillas de whatsapp excedentes y los servicios extra, no incluidos en el plan contratado se liquidarán al final del periodo mensual según tarifa vigente. Plantillas Mkt Adicionales $0.0989 c/u, Plantillas Utility Adicionales $0.0544 c/u. Conversación Extra Sin IA $0,0488, Conversación Extra Whatsapp Sin IA: $0,1788, Conversación IA Extra $0,1488, Conversación IA Extra Whatsapp $0,2588.</li>
+            <li>WhatsApp maneja precios diferenciados para los mensajes salientes según el mercado destino de los mensajes.</li>
+            <li id="prop-custom-term" class="hidden"></li>
+            <li>Se considera una conversación un intercambio de hasta 5 interacciones. Si una conversación tiene más de 5 mensajes salientes se computará como 2 o más conversaciones según la cantidad de mensajes salientes.</li>
+          </ul>
+          
+          <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center text-slate-500 text-[10px] gap-1">
+            <p class="font-semibold text-slate-700">Botiax Equipo Comercial | <a href="mailto:comercial@botiax.com" class="text-amber-600 hover:underline">comercial@botiax.com</a></p>
+            <p class="font-medium text-slate-600">Botiax - Soluciones de Automatización e Inteligencia Artificial Conversacional</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Technical Breakdown & Financial Matrix -->
+  <div id="tech-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+    <div class="bg-slate-900 text-slate-100 rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden my-auto border border-slate-800 p-6 space-y-6">
+      
+      <div id="printable-tech" class="space-y-6">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+          <div>
+            <h3 class="text-sm font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 012-2h2a2 2 0 012-2z"></path></svg>
+              Desglose Técnico y Financiero Interno
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5" id="tb-plan-title">Cotizando: Plan Base</p>
+          </div>
+          <button onclick="closeTechBreakdownModal()" class="text-slate-400 hover:text-white font-bold text-lg print:hidden">&times;</button>
+        </div>
+
+        <!-- Metadata de Cliente y Cotización -->
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div class="space-y-1">
+            <span class="text-amber-500 font-bold block uppercase text-[10px]">Información del Cliente:</span>
+            <p class="text-slate-200"><strong class="text-slate-400">Empresa:</strong> <span id="tb-client-company">-</span></p>
+            <p class="text-slate-200"><strong class="text-slate-400">Responsable:</strong> <span id="tb-client-contact">-</span></p>
+            <p class="text-slate-400"><span id="tb-client-email"></span> | <span id="tb-client-phone"></span></p>
+          </div>
+          <div class="space-y-1 text-right sm:text-right">
+            <span class="text-amber-500 font-bold block uppercase text-[10px]">Datos de Cotización:</span>
+            <p class="text-slate-200"><strong class="text-slate-400">Asesor:</strong> <span id="tb-seller-name">-</span></p>
+            <p class="text-slate-200"><strong class="text-slate-400">Fecha de Envío:</strong> <span id="tb-quote-date">-</span></p>
+            <p class="text-slate-200"><strong class="text-slate-400">Validez:</strong> <span id="tb-quote-validity">- Días</span></p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1.5">
+            <span class="text-amber-500 font-bold block uppercase tracking-wider text-[11px]">1. Resumen Financiero Mensual</span>
+            <div class="space-y-1 text-slate-300">
+              <div class="flex justify-between"><span>Precio Lista Mensual:</span><span id="tb-monthly-list" class="font-mono">$0.00 USD</span></div>
+              <div class="flex justify-between"><span>Descuento Aplicado:</span><span id="tb-monthly-disc" class="font-mono text-amber-400">0%</span></div>
+              <div class="flex justify-between font-bold text-white border-t border-slate-800 pt-1"><span>Facturación Mensual Cliente:</span><span id="tb-monthly-final" class="font-mono text-amber-500">$0.00 USD</span></div>
+              <div class="flex justify-between"><span>Costo Directo Servidores/Meta:</span><span id="tb-monthly-cost" class="font-mono text-red-400">$0.00 USD</span></div>
+              <div class="flex justify-between"><span>Comisión Partner:</span><span id="tb-partner-comm" class="font-mono">$0.00 USD</span></div>
+              <div class="flex justify-between font-bold text-emerald-400 border-t border-slate-800 pt-1"><span>Ganancia Neta Botiax:</span><span id="tb-monthly-gain" class="font-mono">$0.00 USD (0% Margen)</span></div>
+            </div>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1.5">
+            <span class="text-amber-500 font-bold block uppercase tracking-wider text-[11px]">2. Setup y Desarrollo</span>
+            <div class="space-y-1 text-slate-300">
+              <div class="flex justify-between"><span>Setup Precio Lista:</span><span id="tb-setup-list" class="font-mono">$0.00 USD</span></div>
+              <div class="flex justify-between"><span>Bonificación Setup:</span><span id="tb-setup-bonif" class="font-mono text-amber-400">0%</span></div>
+              <div class="flex justify-between font-bold text-white border-t border-slate-800 pt-1"><span>Setup Final Cobrado:</span><span id="tb-setup-final" class="font-mono text-amber-500">$0.00 USD</span></div>
+              <div class="flex justify-between pt-2 text-slate-400"><span>Tiempo Estimado Implementación:</span><span id="tb-impl-time" class="font-bold text-slate-200">1 Día Hábil</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-300">3. Matriz de Costos Directos y Márgenes por Componente</span>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-950 text-slate-400 text-[10px] uppercase border-b border-slate-800">
+                  <th class="p-2">Ítem / Componente</th>
+                  <th class="p-2 text-center">Cant.</th>
+                  <th class="p-2 text-right">Costo U.</th>
+                  <th class="p-2 text-right">Costo Total</th>
+                  <th class="p-2 text-right">Precio Lista U.</th>
+                  <th class="p-2 text-right">Precio Lista Total</th>
+                  <th class="p-2 text-center">Margen Bruto</th>
+                </tr>
+              </thead>
+              <tbody id="tb-cost-matrix-body" class="divide-y divide-slate-800/60 text-slate-300">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botones de Acción dentro del modal -->
+      <div class="flex justify-end gap-3 pt-2 print:hidden">
+        <button onclick="printTechBreakdown()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+          Descargar / Imprimir
+        </button>
+        <button onclick="closeTechBreakdownModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold px-4 py-2 rounded-xl text-xs">Cerrar</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const PRICING = {
+      licencia: 15,
+      canales: { wpp: 25, webchat: 25, ig: 25, fb: 25 },
+      ia_level: { none: 0, starter: 30, grow: 60, pro: 100, corporate: 150 },
+      ia_setup: { none: 0, starter: 60, grow: 120, pro: 200, corporate: 300 },
+      impl_time: { none: '1 Día Hábil', starter: '5 Días Hábiles', grow: '7 Días Hábiles', pro: '10 Días Hábiles', corporate: '15 Días Hábiles' },
+      auto_unit: 5,
+      wpp_mkt_base: 15,
+      int_correo: 15, int_sheets: 25, int_tn_posventa: 25, int_custom: 120,
+      cap_equipo_hs: 25, cap_admin_hs: 25, config_inicial: 30, seguimiento_hs: 30
+    };
+
+    const MARKET_RATES = {
+      "Colombia": {"plantillaMktCost":0.0145,"plantillaMktPrice":0.0225,"plantillaUtCost":0.0028,"plantillaUtPrice":0.0054,"stdNoIaCost":0,"stdNoIaPrice":0.0488,"wppNoIaCost":0.014,"wppNoIaPrice":0.028,"stdIaCost":0.035,"stdIaPrice":0.1488,"wppIaCost":0.049,"wppIaPrice":0.0724},
+      "Estados Unidos": {"plantillaMktCost":0.027,"plantillaMktPrice":0.0419,"plantillaUtCost":0.0054,"plantillaUtPrice":0.0105,"stdNoIaCost":0,"stdNoIaPrice":0.0488,"wppNoIaCost":0.027,"wppNoIaPrice":0.054,"stdIaCost":0.035,"stdIaPrice":0.1488,"wppIaCost":0.062,"wppIaPrice":0.0916},
+      "Brasil": {"plantillaMktCost":0.0645,"plantillaMktPrice":0.1,"plantillaUtCost":0.0088,"plantillaUtPrice":0.0171,"stdNoIaCost":0,"stdNoIaPrice":0.0488,"wppNoIaCost":0.044,"wppNoIaPrice":0.0836,"stdIaCost":0.035,"stdIaPrice":0.1488,"wppIaCost":0.079,"wppIaPrice":0.1168},
+      "México": {"plantillaMktCost":0.0417,"plantillaMktPrice":0.0646,"plantillaUtCost":0.0105,"plantillaUtPrice":0.0204,"stdNoIaCost":0,"stdNoIaPrice":0.0488,"wppNoIaCost":0.0525,"wppNoIaPrice":0.0945,"stdIaCost":0.035,"stdIaPrice":0.1488,"wppIaCost":0.0875,"wppIaPrice":0.1294},
+      "Resto de Latinoamérica": {"plantillaMktCost":0.076,"plantillaMktPrice":0.1178,"plantillaUtCost":0.0133,"plantillaUtPrice":0.0259,"stdNoIaCost":0,"stdNoIaPrice":0.0488,"wppNoIaCost":0.0665,"wppNoIaPrice":0.133,"stdIaCost":0.035,"stdIaPrice":0.1488,"wppIaCost":0.1015,"wppIaPrice":0.1501},
+      "Chile": {"plantillaMktCost":0.0909,"plantillaMktPrice":0.1409,"plantillaUtCost":0.022,"plantillaUtPrice":0.0428,"stdNoIaCost":0,"stdNoIaPrice":0.0488,"wppNoIaCost":0.11,"wppNoIaPrice":0.154,"stdIaCost":0.035,"stdIaPrice":0.1488,"wppIaCost":0.145,"wppIaPrice":0.2144},
+      "España": {"plantillaMktCost":0.0727,"plantillaMktPrice":0.1127,"plantillaUtCost":0.022,"plantillaUtPrice":0.0428,"stdNoIaCost":0,"stdNoIaPrice":0.0488,"wppNoIaCost":0.11,"wppNoIaPrice":0.176,"stdIaCost":0.035,"stdIaPrice":0.1488,"wppIaCost":0.145,"wppIaPrice":0.2144},
+      "Argentina": {"plantillaMktCost":0.0638,"plantillaMktPrice":0.0989,"plantillaUtCost":0.028,"plantillaUtPrice":0.0544,"stdNoIaCost":0,"stdNoIaPrice":0.0488,"wppNoIaCost":0.14,"wppNoIaPrice":0.1788,"stdIaCost":0.035,"stdIaPrice":0.1488,"wppIaCost":0.175,"wppIaPrice":0.2588},
+      "Perú": {"plantillaMktCost":0.0723,"plantillaMktPrice":0.1121,"plantillaUtCost":0.032,"plantillaUtPrice":0.0622,"stdNoIaCost":0,"stdNoIaPrice":0.0488,"wppNoIaCost":0.16,"wppNoIaPrice":0.2043,"stdIaCost":0.035,"stdIaPrice":0.1488,"wppIaCost":0.195,"wppIaPrice":0.2884},
+      "Otros": {"plantillaMktCost":0.0624,"plantillaMktPrice":0.0967,"plantillaUtCost":0.079,"plantillaUtPrice":0.1536,"stdNoIaCost":0,"stdNoIaPrice":0.0488,"wppNoIaCost":0.395,"wppNoIaPrice":0.474,"stdIaCost":0.035,"stdIaPrice":0.1488,"wppIaCost":0.43,"wppIaPrice":0.559}
+    };
+
+const EXECUTIVES = {
+      valeria: { name: 'Valeria Espinosa', email: 'vespinosa@botiax.com' },
+      adriana: { name: 'Adriana Vazquez', email: 'avazquez@botiax.com' }
+    };
+
+    const PLAN_PRESETS = {
+      base: {
+        name: 'Plan Base',
+        ia: 'none', lic: 2, auto: 2, stdChannels: 1, stdTkts: 200, wppLines: 0, wppTkts: 0,
+        cap_equipo: 1, cap_admin: 1, config_inicial: true,
+        target_price: 59, plan_discount_m: 21.08, plan_discount_s: 60,
+        baseSummary: "Sin IA • 2 Licencias • 1 Canal Standard a elección • 200 Conversaciones Estándar • 2 Automatizaciones"
+      },
+      starter: {
+        name: 'Starter',
+        ia: 'starter', lic: 2, auto: 5, stdChannels: 1, stdTkts: 200, wppLines: 0, wppTkts: 0,
+        cap_equipo: 1, cap_admin: 1, config_inicial: true,
+        target_price: 99, plan_discount_m: 29.15, plan_discount_s: 60,
+        baseSummary: "IA Starter • 2 Licencias • 1 Canal Standard a elección • 200 Conversaciones Estándar • 5 Automatizaciones"
+      },
+      grow: {
+        name: 'Grow',
+        ia: 'grow', lic: 5, auto: 5, stdChannels: 3, stdTkts: 500, wppLines: 0, wppTkts: 0,
+        int_correo: 1, int_sheets: 1, cap_equipo: 1, cap_admin: 1, config_inicial: true,
+        target_price: 199, plan_discount_m: 43.05, plan_discount_s: 60,
+        baseSummary: "IA Grow • 5 Licencias • 3 Canales Standard a elección • 500 Conversaciones Estándar • 5 Automatizaciones • 1 Integración Correo • 1 Integración Sheets"
+      },
+      pro: {
+        name: 'Pro',
+        ia: 'pro', lic: 8, auto: 10, stdChannels: 3, stdTkts: 500, wppLines: 1, wppTkts: 500,
+        int_correo: 2, int_sheets: 2, wpp_mkt: true, wpp_mkt_sends: 100,
+        cap_equipo: 1, cap_admin: 1, config_inicial: true,
+        target_price: 299, plan_discount_m: 55.30, plan_discount_s: 60,
+        baseSummary: "IA Pro • 8 Licencias • 3 Canales Standard a elección • 500 Conversaciones Estándar • 1 Canal WhatsApp • 500 Conversaciones WhatsApp • 10 Automatizaciones • 2 Int. Correo • 2 Int. Sheets • WSP MKT (100 envíos)"
+      },
+      corporate: {
+        name: 'Corporate',
+        ia: 'corporate', lic: 12, auto: 10, stdChannels: 3, stdTkts: 1000, wppLines: 1, wppTkts: 1000,
+        int_correo: 2, int_sheets: 2, wpp_mkt: true, wpp_mkt_sends: 500,
+        cap_equipo: 1, cap_admin: 1, config_inicial: true,
+        target_price: 399, plan_discount_m: 60.90, plan_discount_s: 60,
+        baseSummary: "IA Corporate • 12 Licencias • 3 Canales Standard a elección • 1000 Conversaciones Estándar • 1 Canal WhatsApp • 1000 Conversaciones WhatsApp • 10 Automatizaciones • 2 Int. Correo • 2 Int. Sheets • WSP MKT (500 envíos)"
+      },
+      custom: {
+        name: 'Personalizado',
+        ia: 'none', lic: 1, auto: 0, stdChannels: 0, stdTkts: 0, wppLines: 0, wppTkts: 0,
+        cap_equipo: 0, cap_admin: 0, config_inicial: false,
+        plan_discount_m: 0, plan_discount_s: 0,
+        baseSummary: "Configuración Personalizada a Medida"
+      }
+    };
+
+const IA_ORDER = ['none', 'starter', 'grow', 'pro', 'corporate'];
+    let activePlanKey = 'custom';
+    let currentEditChannel = null;
+
+    const customQuantities = {
+      wpp: 0,
+      std: 0,
+      webchat: 0,
+      ig: 0,
+      fb: 0,
+      wpp_mkt: 0
+    };
+
+    function updateSliderValueDisplay(id, val) {
+      const el = document.getElementById(id);
+      if (el) el.innerText = val + " ✏️";
+    }
+
+    function onSliderRangeInput(channelKey, val) {
+      const parsedVal = parseInt(val) || 0;
+
+      // No se pueden cargar conversaciones si no existe al menos un canal del tipo correspondiente.
+      if (channelKey === 'std') {
+        const hasStdChannel = ['webchat','ig','fb','email','api'].some(c => (parseInt(document.getElementById(`qty-chan-${c}`).value) || 0) > 0);
+        if (parsedVal > 0 && !hasStdChannel) {
+          document.getElementById('qty-chan-webchat').value = 1;
+          customQuantities.webchat = 1;
+        }
+      }
+      if (channelKey === 'wpp') {
+        const wppInput = document.getElementById('qty-chan-wpp');
+        if (parsedVal > 0 && (parseInt(wppInput.value) || 0) === 0) {
+          wppInput.value = 1;
+          customQuantities.wppLines = 1;
+        }
+      }
+
+      customQuantities[channelKey] = parsedVal;
+      updateSliderValueDisplay(`slider-val-${channelKey}`, parsedVal);
+      validateAndRecalculate();
+    }
+
+    function onStandardChannelQtyChange() {
+      ['webchat','ig','fb','email','api'].forEach(c => {
+        customQuantities[c] = Math.max(0, parseInt(document.getElementById(`qty-chan-${c}`).value) || 0);
+      });
+      const hasStdChannel = ['webchat','ig','fb','email','api'].some(c => customQuantities[c] > 0);
+      if (!hasStdChannel) {
+        customQuantities.std = 0;
+        const slider = document.getElementById('qty-tkt-std');
+        if (slider) slider.value = 0;
+        updateSliderValueDisplay('slider-val-std', 0);
+      }
+      validateAndRecalculate();
+    }
+
+    function onWppChannelQtyChange() {
+      customQuantities.wppLines = Math.max(0, parseInt(document.getElementById('qty-chan-wpp').value) || 0);
+      if (customQuantities.wppLines === 0) {
+        customQuantities.wpp = 0;
+        const slider = document.getElementById('qty-tkt-wpp');
+        if (slider) slider.value = 0;
+        updateSliderValueDisplay('slider-val-wpp', 0);
+      }
+      validateAndRecalculate();
+    }
+
+    function openEditModal(channelKey, channelTitle) {
+      currentEditChannel = channelKey;
+      let currentVal = customQuantities[channelKey] || 0;
+      document.getElementById('edit-modal-title').innerText = `Editar: ${channelTitle}`;
+      document.getElementById('edit-conv-input').value = currentVal;
+      document.getElementById('edit-conv-error').classList.add('hidden');
+      document.getElementById('edit-conv-modal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-conv-modal').classList.add('hidden');
+      currentEditChannel = null;
+    }
+
+    function confirmEditModal() {
+      if (!currentEditChannel) return;
+      const val = Math.max(0, parseInt(document.getElementById('edit-conv-input').value) || 0);
+      const errEl = document.getElementById('edit-conv-error');
+
+      if (currentEditChannel === 'wpp_mkt') {
+        onWppMktInput(val);
+        closeEditModal();
+        return;
+      }
+
+      if (currentEditChannel === 'std') {
+        customQuantities.std = val;
+        const slider = document.getElementById('qty-tkt-std');
+        if (slider) slider.value = Math.min(val, 5000);
+        updateSliderValueDisplay('slider-val-std', val);
+        closeEditModal();
+        validateAndRecalculate();
+        return;
+      }
+
+      if (currentEditChannel === 'wpp') {
+        customQuantities.wpp = val;
+        const slider = document.getElementById('qty-tkt-wpp');
+        if (slider) slider.value = Math.min(val, 5000);
+        updateSliderValueDisplay('slider-val-wpp', val);
+        closeEditModal();
+        validateAndRecalculate();
+        return;
+      }
+
+      closeEditModal();
+    }
+
+    function onWppMktInput(val) {
+      const parsedVal = parseInt(val) || 0;
+      customQuantities.wpp_mkt = parsedVal;
+      const slider = document.getElementById('qty-wpp-mkt-sends');
+      if (slider) slider.value = Math.min(parsedVal, 1000);
+      updateSliderValueDisplay('slider-val-wpp-mkt', parsedVal);
+      const chk = document.getElementById('chk-wpp-mkt');
+      if (parsedVal > 0) chk.checked = true;
+      validateAndRecalculate();
+    }
+
+    function syncWppMarketingVisual() {
+      const chk = document.getElementById('chk-wpp-mkt');
+      const slider = document.getElementById('qty-wpp-mkt-sends');
+      const value = document.getElementById('slider-val-wpp-mkt');
+      const moduleBox = document.getElementById('box-wpp-mkt-module');
+      const hasWppLine = (parseInt(document.getElementById('qty-chan-wpp')?.value) || 0) > 0;
+      const enabled = !!chk?.checked && hasWppLine;
+      if (slider) {
+        slider.disabled = !enabled;
+        slider.classList.toggle('opacity-40', !enabled);
+        slider.classList.toggle('cursor-not-allowed', !enabled);
+      }
+      if (value) value.classList.toggle('opacity-40', !enabled);
+      if (moduleBox) moduleBox.classList.toggle('opacity-50', !hasWppLine);
+      syncStepperDisabledState();
+    }
+
+    function applyPlan(planKey) {
+      activePlanKey = planKey;
+      const headerPlan = document.getElementById('header-plan-select');
+      if (headerPlan) headerPlan.value = planKey;
+      const plan = PLAN_PRESETS[planKey];
+      if (!plan) return;
+
+      ['base', 'starter', 'grow', 'pro', 'corporate', 'custom'].forEach(k => {
+        const card = document.getElementById(`card-plan-${k}`);
+        if (card) {
+          if (k === planKey) {
+            card.classList.add('border-amber-500', 'bg-amber-500/10', 'ring-1', 'ring-amber-500');
+            card.classList.remove('border-slate-800');
+          } else {
+            card.classList.remove('border-amber-500', 'bg-amber-500/10', 'ring-1', 'ring-amber-500');
+            card.classList.add('border-slate-800');
+          }
+        }
+      });
+
+      const isCustom = planKey === 'custom';
+      document.getElementById('container-slider-discount-comm').classList.toggle('hidden', !isCustom);
+      document.getElementById('container-slider-bonif-setup').classList.toggle('hidden', !isCustom);
+
+      document.getElementById('ia-level').value = plan.ia;
+      document.getElementById('qty-licencias').value = plan.lic;
+      document.getElementById('qty-auto').value = plan.auto || 0;
+
+      const channelDefaults = {webchat:0, ig:0, fb:0, email:0, api:0};
+      if (plan.stdChannels) channelDefaults.webchat = plan.stdChannels;
+      Object.keys(channelDefaults).forEach(c => {
+        customQuantities[c] = channelDefaults[c];
+        document.getElementById(`qty-chan-${c}`).value = channelDefaults[c];
+      });
+      customQuantities.std = plan.stdTkts || 0;
+      const stdSlider = document.getElementById('qty-tkt-std');
+      if (stdSlider) stdSlider.value = Math.min(plan.stdTkts || 0, 5000);
+      updateSliderValueDisplay('slider-val-std', plan.stdTkts || 0);
+
+      customQuantities.wppLines = plan.wppLines || 0;
+      customQuantities.wpp = plan.wppTkts || 0;
+      document.getElementById('qty-chan-wpp').value = plan.wppLines || 0;
+      const wppSlider = document.getElementById('qty-tkt-wpp');
+      if (wppSlider) wppSlider.value = Math.min(plan.wppTkts || 0, 5000);
+      updateSliderValueDisplay('slider-val-wpp', plan.wppTkts || 0);
+
+      document.getElementById('qty-int-email').value = plan.int_correo || 0;
+      document.getElementById('qty-int-sheets').value = plan.int_sheets || 0;
+      document.getElementById('sel-tn-posventa').value = plan.int_tn_posventa ? "1" : "0";
+      document.getElementById('qty-tn-prods').value = plan.tn_prods || 0;
+      document.getElementById('qty-int-custom').value = 0;
+
+      document.getElementById('chk-wpp-mkt').checked = !!plan.wpp_mkt;
+      const mktSends = plan.wpp_mkt_sends || 0;
+      customQuantities.wpp_mkt = mktSends;
+      const mktSlider = document.getElementById('qty-wpp-mkt-sends');
+      if (mktSlider) mktSlider.value = Math.min(mktSends, 1000);
+      updateSliderValueDisplay('slider-val-wpp-mkt', mktSends);
+
+      document.getElementById('qty-cap-equipo').value = plan.cap_equipo || 0;
+      document.getElementById('qty-cap-admin').value = plan.cap_admin || 0;
+      document.getElementById('chk-config-inicial').checked = true;
+      document.getElementById('qty-seguimiento-hs').value = "0";
+
+      document.getElementById('slider-discount-comm').value = 0;
+      document.getElementById('slider-bonif-setup').value = plan.plan_discount_s || 0;
+
+      onIaLevelChange();
+      recalculate();
+    }
+
+function resetCalculator() {
+      // Reinicia la configuración comercial, conservando datos del cliente/asesor, mercado, validez, notas y descuentos.
+      const keepPartner = document.getElementById('slider-partner-comm').value;
+      const keepFit = document.getElementById('slider-discount-comm').value;
+      const keepSetup = document.getElementById('slider-bonif-setup').value;
+      applyPlan('custom');
+      document.getElementById('slider-partner-comm').value = keepPartner;
+      document.getElementById('slider-discount-comm').value = keepFit;
+      document.getElementById('slider-bonif-setup').value = keepSetup;
+      const resetBtn = document.getElementById('btn-reset');
+      if (resetBtn) {
+        resetBtn.classList.add('bg-emerald-500/20','text-emerald-300','border-emerald-500/40');
+        setTimeout(() => resetBtn.classList.remove('bg-emerald-500/20','text-emerald-300','border-emerald-500/40'), 450);
+      }
+      recalculate();
+    }
+
+    function clearCalculator() {
+      // Limpieza total: configuración + descuentos + notas + datos de partes.
+      applyPlan('custom');
+      document.getElementById('client-company').value = '';
+      document.getElementById('client-contact').value = '';
+      document.getElementById('client-email').value = '';
+      document.getElementById('client-phone').value = '';
+      document.getElementById('seller-phone').value = '';
+      document.getElementById('seller-select').value = 'valeria';
+      document.getElementById('market-select').value = 'Argentina';
+      document.getElementById('quote-validity-days').value = 7;
+      document.getElementById('quote-note').value = '';
+      document.getElementById('quote-term-note').value = '';
+      document.getElementById('slider-partner-comm').value = 0;
+      document.getElementById('slider-discount-comm').value = 0;
+      document.getElementById('slider-bonif-setup').value = 0;
+      const btn = document.getElementById('btn-clear');
+      if (btn) {
+        btn.classList.add('bg-red-500/30','text-red-200','border-red-500/60');
+        setTimeout(() => btn.classList.remove('bg-red-500/30','text-red-200','border-red-500/60'), 450);
+      }
+      recalculate();
+    }
+
+    function validateMinLimits() {
+      if (!activePlanKey || !PLAN_PRESETS[activePlanKey] || activePlanKey === 'custom') return;
+      const min = PLAN_PRESETS[activePlanKey];
+
+      if (parseInt(document.getElementById('qty-licencias').value) < min.lic) {
+        document.getElementById('qty-licencias').value = min.lic;
+      }
+      if (min.auto && parseInt(document.getElementById('qty-auto').value) < min.auto) {
+        document.getElementById('qty-auto').value = min.auto;
+      }
+
+      const stdChannels = ['webchat','ig','fb','email','api'];
+      const stdCount = stdChannels.reduce((sum,c) => sum + (parseInt(document.getElementById(`qty-chan-${c}`).value)||0), 0);
+      if (stdCount < min.stdChannels) {
+        const deficit = min.stdChannels - stdCount;
+        const webchatInput = document.getElementById('qty-chan-webchat');
+        webchatInput.value = (parseInt(webchatInput.value)||0) + deficit;
+      }
+      const stdT = customQuantities.std || 0;
+      if (stdT < (min.stdTkts || 0)) {
+        customQuantities.std = min.stdTkts || 0;
+        document.getElementById('qty-tkt-std').value = Math.min(min.stdTkts || 0, 5000);
+        updateSliderValueDisplay('slider-val-std', min.stdTkts || 0);
+      }
+
+      const wppLines = parseInt(document.getElementById('qty-chan-wpp').value)||0;
+      if (wppLines < (min.wppLines || 0)) {
+        document.getElementById('qty-chan-wpp').value = min.wppLines || 0;
+        customQuantities.wppLines = min.wppLines || 0;
+      }
+      if ((customQuantities.wpp || 0) < (min.wppTkts || 0)) {
+        customQuantities.wpp = min.wppTkts || 0;
+        document.getElementById('qty-tkt-wpp').value = Math.min(min.wppTkts || 0, 5000);
+        updateSliderValueDisplay('slider-val-wpp', min.wppTkts || 0);
+      }
+
+      if (min.int_correo && parseInt(document.getElementById('qty-int-email').value) < min.int_correo) document.getElementById('qty-int-email').value = min.int_correo;
+      if (min.int_sheets && parseInt(document.getElementById('qty-int-sheets').value) < min.int_sheets) document.getElementById('qty-int-sheets').value = min.int_sheets;
+
+      if (min.wpp_mkt) {
+        document.getElementById('chk-wpp-mkt').checked = true;
+        if (min.wpp_mkt_sends && customQuantities.wpp_mkt < min.wpp_mkt_sends) {
+          customQuantities.wpp_mkt = min.wpp_mkt_sends;
+          document.getElementById('qty-wpp-mkt-sends').value = Math.min(min.wpp_mkt_sends,1000);
+          updateSliderValueDisplay('slider-val-wpp-mkt', min.wpp_mkt_sends);
+        }
+      }
+    }
+
+    function validateAndRecalculate() {
+      validateMinLimits();
+      recalculate();
+    }
+
+function onWppChannelToggle(isWppActive) {
+      const mktCard = document.getElementById('wpp-marketing-card');
+      const lockMsg = document.getElementById('wpp-lock-msg');
+      if (isWppActive) {
+        mktCard.classList.remove('disabled-card');
+        lockMsg.classList.add('hidden');
+      } else {
+        mktCard.classList.add('disabled-card');
+        lockMsg.classList.remove('hidden');
+        document.getElementById('chk-wpp-mkt').checked = false;
+        customQuantities.wpp_mkt = 0;
+        const slider = document.getElementById('qty-wpp-mkt-sends');
+        if (slider) slider.value = 0;
+        updateSliderValueDisplay('slider-val-wpp-mkt', 0);
+        document.getElementById('qty-plantillas-mkt').value = 0;
+        document.getElementById('qty-plantillas-ut').value = 0;
+      }
+    }
+
+function onIaLevelChange() {
+      const iaSelect = document.getElementById('ia-level');
+      let currentIa = iaSelect.value;
+
+      if (activePlanKey && PLAN_PRESETS[activePlanKey] && activePlanKey !== 'custom') {
+        const planIa = PLAN_PRESETS[activePlanKey].ia;
+        const currentIdx = IA_ORDER.indexOf(currentIa);
+        const planIdx = IA_ORDER.indexOf(planIa);
+
+        if (currentIdx < planIdx) {
+          iaSelect.value = planIa;
+          currentIa = planIa;
+          alert(`El plan ${PLAN_PRESETS[activePlanKey].name} incluye como mínimo Asistente IA (${planIa.toUpperCase()}). No se puede reducir la categoría.`);
+        }
+      }
+
+      const intContainers = document.querySelectorAll('.integrations-container');
+      intContainers.forEach(el => {
+        if (currentIa === 'none') {
+          el.classList.add('opacity-40', 'pointer-events-none');
+          el.querySelectorAll('input, select').forEach(i => i.value = 0);
+        } else {
+          el.classList.remove('opacity-40', 'pointer-events-none');
+        }
+      });
+
+      recalculate();
+    }
+
+    function onIntegrationChange() {
+      const ia = document.getElementById('ia-level').value;
+      const intEmail = parseInt(document.getElementById('qty-int-email').value) || 0;
+      const intSheets = parseInt(document.getElementById('qty-int-sheets').value) || 0;
+      const intTnPos = parseInt(document.getElementById('sel-tn-posventa').value) || 0;
+      const tnProds = parseInt(document.getElementById('qty-tn-prods').value) || 0;
+      const intCustom = parseInt(document.getElementById('qty-int-custom').value) || 0;
+
+      const hasIntegrations = (intEmail > 0 || intSheets > 0 || intTnPos > 0 || tnProds > 0 || intCustom > 0);
+
+      if (hasIntegrations && (ia === 'none' || ia === 'starter')) {
+        document.getElementById('ia-level').value = 'grow';
+        alert("Las integraciones requieren Asistente IA GROW o superior. Se ha actualizado automáticamente.");
+      }
+
+      recalculate();
+    }
+
+    function calcTiendaNubeCatPrice(prods) {
+      if (prods <= 0) return 0;
+      if (prods <= 15) return 30;
+      if (prods <= 30) return prods * 1.83;
+      if (prods <= 50) return prods * 1.60;
+      if (prods <= 80) return prods * 1.25;
+      return prods * 1.00;
+    }
+
+    function toggleSelectionClass(elementId, isSelected) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      if (isSelected) {
+        el.classList.add('card-item-selected');
+      } else {
+        el.classList.remove('card-item-selected');
+      }
+    }
+
+    function updateCardHighlights() {
+      const iaVal = document.getElementById('ia-level').value;
+      toggleSelectionClass('box-ia-level', iaVal !== 'none');
+
+      const licVal = parseInt(document.getElementById('qty-licencias').value) || 0;
+      toggleSelectionClass('box-qty-licencias', licVal >= 1);
+
+      const autoVal = parseInt(document.getElementById('qty-auto').value) || 0;
+      toggleSelectionClass('box-qty-auto', autoVal > 0);
+
+      const intEmailVal = parseInt(document.getElementById('qty-int-email').value) || 0;
+      toggleSelectionClass('box-int-email', intEmailVal > 0);
+
+      const intSheetsVal = parseInt(document.getElementById('qty-int-sheets').value) || 0;
+      toggleSelectionClass('box-int-sheets', intSheetsVal > 0);
+
+      const tnPosventaVal = document.getElementById('sel-tn-posventa').value;
+      toggleSelectionClass('box-tn-posventa', tnPosventaVal === '1');
+
+      const tnProdsVal = parseInt(document.getElementById('qty-tn-prods').value) || 0;
+      toggleSelectionClass('box-tn-cat', tnProdsVal > 0);
+
+      const intCustomVal = parseInt(document.getElementById('qty-int-custom').value) || 0;
+      toggleSelectionClass('box-int-custom', intCustomVal > 0);
+
+      const plantillasMktVal = parseInt(document.getElementById('qty-plantillas-mkt').value) || 0;
+      toggleSelectionClass('box-plantillas-mkt', plantillasMktVal > 0);
+
+      const plantillasUtVal = parseInt(document.getElementById('qty-plantillas-ut').value) || 0;
+      toggleSelectionClass('box-plantillas-ut', plantillasUtVal > 0);
+
+      const capEquipoVal = parseInt(document.getElementById('qty-cap-equipo').value) || 0;
+      toggleSelectionClass('box-cap-equipo', capEquipoVal > 0);
+
+      const capAdminVal = parseInt(document.getElementById('qty-cap-admin').value) || 0;
+      toggleSelectionClass('box-cap-admin', capAdminVal > 0);
+
+      const chkConfigInicial = document.getElementById('chk-config-inicial').checked;
+      toggleSelectionClass('box-config-inicial', chkConfigInicial);
+
+      const seguimientoVal = document.getElementById('qty-seguimiento-hs').value;
+      toggleSelectionClass('box-seguimiento-hs', seguimientoVal !== '0');
+    }
+
+    function recalculate() {
+      updateCardHighlights();
+
+      const ia = document.getElementById('ia-level').value;
+      const lic = parseInt(document.getElementById('qty-licencias').value) || 0;
+      const hasIa = ia !== 'none';
+      const market = document.getElementById('market-select').value || 'Argentina';
+      const rates = MARKET_RATES[market] || MARKET_RATES['Argentina'];
+
+      const currentPlanName = activePlanKey && PLAN_PRESETS[activePlanKey] ? PLAN_PRESETS[activePlanKey].name : 'Personalizado';
+      document.getElementById('summary-selected-plan').innerText = `Plan Seleccionado: ${currentPlanName}`;
+
+      const isCustomPlan = (activePlanKey === 'custom');
+
+      // Canales estándar: cantidades por tipo, con una única bolsa de conversaciones.
+      const stdChannels = {
+        webchat: Math.max(0, parseInt(document.getElementById('qty-chan-webchat').value) || 0),
+        ig: Math.max(0, parseInt(document.getElementById('qty-chan-ig').value) || 0),
+        fb: Math.max(0, parseInt(document.getElementById('qty-chan-fb').value) || 0),
+        email: Math.max(0, parseInt(document.getElementById('qty-chan-email').value) || 0),
+        api: Math.max(0, parseInt(document.getElementById('qty-chan-api').value) || 0)
+      };
+      const stdChannelCount = stdChannels.webchat + stdChannels.ig + stdChannels.fb + stdChannels.email + stdChannels.api;
+
+      // WhatsApp: líneas separadas + una única bolsa de conversaciones.
+      const wppLines = Math.max(0, parseInt(document.getElementById('qty-chan-wpp').value) || 0);
+      const stdTkts = Math.max(0, customQuantities.std || 0);
+      const wppTkts = Math.max(0, customQuantities.wpp || 0);
+
+      customQuantities.webchat = stdChannels.webchat;
+      customQuantities.ig = stdChannels.ig;
+      customQuantities.fb = stdChannels.fb;
+      customQuantities.email = stdChannels.email;
+      customQuantities.api = stdChannels.api;
+      customQuantities.wppLines = wppLines;
+      customQuantities.wpp = wppTkts;
+
+      const activeStandardTypes = Object.keys(stdChannels).filter(c => stdChannels[c] > 0);
+      const activeChannels = [...activeStandardTypes];
+      if (wppLines > 0) activeChannels.push('wpp');
+
+      const totalTkts = stdTkts + wppTkts;
+      const hasAnyChannel = stdChannelCount > 0 || wppLines > 0;
+
+      const channelNamesFormatted = {
+        wpp: 'WhatsApp API',
+        webchat: 'Web Chat',
+        ig: 'Instagram',
+        fb: 'Facebook',
+        email: 'Correo electrónico',
+        api: 'Mensajería API'
+      };
+
+      const channelDetailParts = [];
+      if (stdChannels.webchat) channelDetailParts.push(`${stdChannels.webchat} Web Chat`);
+      if (stdChannels.ig) channelDetailParts.push(`${stdChannels.ig} Instagram`);
+      if (stdChannels.fb) channelDetailParts.push(`${stdChannels.fb} Facebook`);
+      if (stdChannels.email) channelDetailParts.push(`${stdChannels.email} Correo electrónico`);
+      if (stdChannels.api) channelDetailParts.push(`${stdChannels.api} Mensajería API`);
+      if (wppLines) channelDetailParts.push(`${wppLines} WhatsApp API`);
+
+      document.getElementById('std-channel-count-badge').innerText = `${stdChannelCount} canal${stdChannelCount === 1 ? '' : 'es'}`;
+      document.getElementById('wpp-channel-count-badge').innerText = `${wppLines} línea${wppLines === 1 ? '' : 's'}`;
+
+      toggleSelectionClass('box-chan-webchat', stdChannels.webchat > 0);
+      toggleSelectionClass('box-chan-ig', stdChannels.ig > 0);
+      toggleSelectionClass('box-chan-fb', stdChannels.fb > 0);
+      toggleSelectionClass('box-chan-email', stdChannels.email > 0);
+      toggleSelectionClass('box-chan-api', stdChannels.api > 0);
+      toggleSelectionClass('box-chan-wpp', wppLines > 0);
+      onWppChannelToggle(wppLines > 0);
+      syncWppMarketingVisual();
+
+      const stdTicketEnabled = stdChannelCount > 0;
+      const wppTicketEnabled = wppLines > 0;
+      const stdSliderEl = document.getElementById('qty-tkt-std');
+      const wppSliderEl = document.getElementById('qty-tkt-wpp');
+      if (stdSliderEl) {
+        stdSliderEl.disabled = !stdTicketEnabled;
+        stdSliderEl.classList.toggle('opacity-40', !stdTicketEnabled);
+        stdSliderEl.classList.toggle('cursor-not-allowed', !stdTicketEnabled);
+      }
+      if (wppSliderEl) {
+        wppSliderEl.disabled = !wppTicketEnabled;
+        wppSliderEl.classList.toggle('opacity-40', !wppTicketEnabled);
+        wppSliderEl.classList.toggle('cursor-not-allowed', !wppTicketEnabled);
+      }
+      document.getElementById('slider-val-std')?.classList.toggle('opacity-40', !stdTicketEnabled);
+      document.getElementById('slider-val-wpp')?.classList.toggle('opacity-40', !wppTicketEnabled);
+
+      const stdRate = hasIa ? rates.stdIaPrice : rates.stdNoIaPrice;
+      const wppRate = hasIa ? rates.wppIaPrice : rates.wppNoIaPrice;
+      document.getElementById('rate-badge-std')?.remove();
+      document.getElementById('wpp-rate-help').innerText = `Mercado ${market}: $${wppRate.toFixed(4)}/conversación${hasIa ? ' con IA' : ' sin IA'}.`;
+      const wppLabel = document.getElementById('plantilla-mkt-rate-label');
+      const utLabel = document.getElementById('plantilla-ut-rate-label');
+      if (wppLabel) wppLabel.innerText = `$${rates.plantillaMktPrice.toFixed(4)}`;
+      if (utLabel) utLabel.innerText = `$${rates.plantillaUtPrice.toFixed(4)}`;
+
+      const warnLic = document.getElementById('warn-lic');
+      const warnChan = document.getElementById('warn-channel');
+      const warningBox = document.getElementById('min-req-warning');
+
+      let isValid = true;
+      if (lic < 1) { warnLic.classList.remove('hidden'); isValid = false; } else warnLic.classList.add('hidden');
+      if (!hasAnyChannel || totalTkts < 1) { warnChan.classList.remove('hidden'); isValid = false; } else warnChan.classList.add('hidden');
+
+      if (!isValid) {
+        warningBox.classList.remove('hidden');
+        document.getElementById('display-monthly-final').innerText = "NO PERMITIDO";
+        document.getElementById('display-setup-final').innerText = "NO PERMITIDO";
+        document.getElementById('header-monthly-price').innerText = 'USD 0';
+        document.getElementById('header-setup-price').innerText = 'USD 0';
+        window.lastQuoteData = null;
+        return;
+      } else {
+        warningBox.classList.add('hidden');
+      }
+
+      const autos = parseInt(document.getElementById('qty-auto').value) || 0;
+      const intEmail = parseInt(document.getElementById('qty-int-email').value) || 0;
+      const intSheets = parseInt(document.getElementById('qty-int-sheets').value) || 0;
+      const intTnPos = parseInt(document.getElementById('sel-tn-posventa').value) || 0;
+      const tnProds = parseInt(document.getElementById('qty-tn-prods').value) || 0;
+      const intCustom = parseInt(document.getElementById('qty-int-custom').value) || 0;
+      const isWppMkt = document.getElementById('chk-wpp-mkt').checked;
+      const wppMktSends = customQuantities.wpp_mkt || 0;
+      const plantillasMkt = parseInt(document.getElementById('qty-plantillas-mkt').value) || 0;
+      const plantillasUt = parseInt(document.getElementById('qty-plantillas-ut').value) || 0;
+      const segHs = parseInt(document.getElementById('qty-seguimiento-hs').value) || 0;
+
+      const tnCatPrice = calcTiendaNubeCatPrice(tnProds);
+      document.getElementById('tn-cat-price-label').innerText = `$${tnCatPrice.toFixed(2)} USD/mes`;
+
+      toggleSelectionClass('box-tn-cat', tnProds > 0);
+      toggleSelectionClass('box-wpp-mkt-module', isWppMkt);
+
+      let wppMktCost = 0;
+      if (isWppMkt && wppLines > 0) {
+        const includedSends = 100;
+        wppMktCost += includedSends * rates.plantillaMktCost;
+        if (wppMktSends > includedSends) {
+          wppMktCost += (wppMktSends - includedSends) * rates.plantillaMktCost;
+        }
+      }
+
+      const stdConvPrice = stdTkts * stdRate;
+      const wppConvPrice = wppTkts * wppRate;
+      const totalTktPrice = stdConvPrice + wppConvPrice;
+      const totalTktCost = stdTkts * (hasIa ? rates.stdIaCost : rates.stdNoIaCost)
+        + wppTkts * (hasIa ? rates.wppIaCost : rates.wppNoIaCost);
+
+      const totalDirectCost =
+        totalTktCost +
+        wppMktCost +
+        plantillasMkt * rates.plantillaMktCost +
+        plantillasUt * rates.plantillaUtCost;
+
+      let basePlanMonthlyList = 0;
+      let extrasMonthlyList = 0;
+      let basePlanDiscountPercent = 0;
+
+      const planPreset = (!isCustomPlan && activePlanKey && PLAN_PRESETS[activePlanKey]) ? PLAN_PRESETS[activePlanKey] : null;
+
+      if (planPreset) {
+        basePlanDiscountPercent = planPreset.plan_discount_m || 0;
+
+        const baseLic = planPreset.lic || 0;
+        extrasMonthlyList += Math.max(0, lic - baseLic) * PRICING.licencia;
+
+        const baseStdChannels = planPreset.stdChannels || 0;
+        extrasMonthlyList += Math.max(0, stdChannelCount - baseStdChannels) * PRICING.canales.webchat;
+
+        const baseWppLines = planPreset.wppLines || 0;
+        extrasMonthlyList += Math.max(0, wppLines - baseWppLines) * PRICING.canales.wpp;
+
+        const baseStdTkts = planPreset.stdTkts || 0;
+        const baseWppTkts = planPreset.wppTkts || 0;
+        if (stdTkts > baseStdTkts) extrasMonthlyList += (stdTkts - baseStdTkts) * stdRate;
+        if (wppTkts > baseWppTkts) extrasMonthlyList += (wppTkts - baseWppTkts) * wppRate;
+
+        const baseAuto = planPreset.auto || 0;
+        extrasMonthlyList += Math.max(0, autos - baseAuto) * PRICING.auto_unit;
+
+        extrasMonthlyList += Math.max(0, intEmail - (planPreset.int_correo || 0)) * PRICING.int_correo;
+        extrasMonthlyList += Math.max(0, intSheets - (planPreset.int_sheets || 0)) * PRICING.int_sheets;
+        if (intTnPos > (planPreset.int_tn_posventa ? 1 : 0)) extrasMonthlyList += PRICING.int_tn_posventa;
+        extrasMonthlyList += tnCatPrice;
+        extrasMonthlyList += intCustom * PRICING.int_custom;
+
+        if (isWppMkt && !planPreset.wpp_mkt) {
+          extrasMonthlyList += PRICING.wpp_mkt_base;
+          if (wppMktSends > 100) extrasMonthlyList += (wppMktSends - 100) * rates.plantillaMktPrice;
+        } else if (isWppMkt && planPreset.wpp_mkt) {
+          const baseSends = planPreset.wpp_mkt_sends || 100;
+          if (wppMktSends > baseSends) extrasMonthlyList += (wppMktSends - baseSends) * rates.plantillaMktPrice;
+        }
+
+        extrasMonthlyList += plantillasMkt * rates.plantillaMktPrice;
+        extrasMonthlyList += plantillasUt * rates.plantillaUtPrice;
+        extrasMonthlyList += segHs * PRICING.seguimiento_hs;
+
+        const planIaPrice = PRICING.ia_level[planPreset.ia] || 0;
+        const currentIaPrice = PRICING.ia_level[ia] || 0;
+        if (currentIaPrice > planIaPrice) extrasMonthlyList += currentIaPrice - planIaPrice;
+
+        const fixedMarketPrices = { pro: { 'Otros': 599 }, corporate: { 'Otros': 799, 'Perú': 449 } };
+        const marketTarget = fixedMarketPrices[activePlanKey] && fixedMarketPrices[activePlanKey][market];
+        const desiredFinalPlanPrice = marketTarget || planPreset.target_price;
+        basePlanMonthlyList = desiredFinalPlanPrice / (1 - basePlanDiscountPercent / 100);
+      } else {
+        basePlanMonthlyList = 0;
+        extrasMonthlyList += PRICING.ia_level[ia];
+        extrasMonthlyList += lic * PRICING.licencia;
+        extrasMonthlyList += stdChannelCount * PRICING.canales.webchat;
+        extrasMonthlyList += wppLines * PRICING.canales.wpp;
+        extrasMonthlyList += totalTktPrice;
+        extrasMonthlyList += autos * PRICING.auto_unit;
+        extrasMonthlyList += intEmail * PRICING.int_correo;
+        extrasMonthlyList += intSheets * PRICING.int_sheets;
+        extrasMonthlyList += intTnPos * PRICING.int_tn_posventa;
+        extrasMonthlyList += tnCatPrice;
+        extrasMonthlyList += intCustom * PRICING.int_custom;
+
+        if (isWppMkt && wppLines > 0) {
+          extrasMonthlyList += PRICING.wpp_mkt_base;
+          if (wppMktSends > 100) extrasMonthlyList += (wppMktSends - 100) * rates.plantillaMktPrice;
+        }
+
+        extrasMonthlyList += plantillasMkt * rates.plantillaMktPrice;
+        extrasMonthlyList += plantillasUt * rates.plantillaUtPrice;
+        extrasMonthlyList += segHs * PRICING.seguimiento_hs;
+      }
+
+      const monthlyListPrice = basePlanMonthlyList + extrasMonthlyList;
+
+      // SETUP
+      let setupListPrice = PRICING.ia_setup[ia];
+      const capEquipoHs = parseInt(document.getElementById('qty-cap-equipo').value) || 0;
+      const capAdminHs = parseInt(document.getElementById('qty-cap-admin').value) || 0;
+      const configInicial = document.getElementById('chk-config-inicial').checked;
+      setupListPrice += capEquipoHs * PRICING.cap_equipo_hs;
+      setupListPrice += capAdminHs * PRICING.cap_admin_hs;
+      if (configInicial) setupListPrice += PRICING.config_inicial;
+
+      let extraCommDiscountPercent = 0;
+      let setupBonifPercent = 0;
+      if (isCustomPlan) {
+        extraCommDiscountPercent = Math.min(30, parseInt(document.getElementById('slider-discount-comm').value) || 0);
+        setupBonifPercent = Math.min(50, parseInt(document.getElementById('slider-bonif-setup').value) || 0);
+      } else {
+        setupBonifPercent = 60;
+      }
+
+      const partnerCommPercent = parseInt(document.getElementById('slider-partner-comm').value) || 0;
+
+      function calcMargin(discP, partP) {
+        const finalBase = basePlanMonthlyList * (1 - (basePlanDiscountPercent + discP) / 100);
+        const finalExtras = extrasMonthlyList * (1 - discP / 100);
+        const finalM = finalBase + finalExtras;
+        const partAmt = finalM * (partP / 100);
+        const netG = finalM - totalDirectCost - partAmt;
+        const margPct = finalM > 0 ? (netG / finalM) * 100 : -999;
+        return { totD: basePlanDiscountPercent + discP, extraD: discP, baseD: basePlanDiscountPercent, finalM, partAmt, netG, margPct };
+      }
+
+      let calc = calcMargin(extraCommDiscountPercent, partnerCommPercent);
+
+      // Mantener la lógica de descuento FIT de esta versión: <35% bloquea; si habilita,
+      // el descuento máximo nunca puede dejar el margen por debajo de 40%.
+      if (isCustomPlan) {
+        const discountSlider = document.getElementById('slider-discount-comm');
+        const marginWithoutFitDiscount = calcMargin(0, partnerCommPercent).margPct;
+        let maxAllowedFitDiscount = 30;
+
+        if (marginWithoutFitDiscount < 35) {
+          maxAllowedFitDiscount = 0;
+        } else {
+          maxAllowedFitDiscount = 0;
+          for (let d = 30; d >= 0; d--) {
+            if (calcMargin(d, partnerCommPercent).margPct >= 40) {
+              maxAllowedFitDiscount = d;
+              break;
+            }
+          }
+        }
+
+        if (extraCommDiscountPercent > maxAllowedFitDiscount) extraCommDiscountPercent = maxAllowedFitDiscount;
+        discountSlider.max = maxAllowedFitDiscount;
+        discountSlider.value = extraCommDiscountPercent;
+        discountSlider.disabled = maxAllowedFitDiscount === 0;
+        discountSlider.classList.toggle('opacity-50', maxAllowedFitDiscount === 0);
+        discountSlider.classList.toggle('cursor-not-allowed', maxAllowedFitDiscount === 0);
+        calc = calcMargin(extraCommDiscountPercent, partnerCommPercent);
+      } else {
+        const discountSlider = document.getElementById('slider-discount-comm');
+        discountSlider.disabled = false;
+        discountSlider.max = 30;
+        discountSlider.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+
+      document.getElementById('commercial-discount-val').innerText = `${extraCommDiscountPercent}%`;
+      document.getElementById('setup-bonif-val').innerText = `${setupBonifPercent}%`;
+      document.getElementById('partner-comm-val').innerText = `${partnerCommPercent}%`;
+
+      const finalMonthlyPrice = Math.floor(calc.finalM);
+      const finalSetupPrice = Math.floor(setupListPrice * (1 - setupBonifPercent / 100));
+      const headerMonthly = document.getElementById('header-monthly-price');
+      const headerSetup = document.getElementById('header-setup-price');
+      if (headerMonthly) headerMonthly.innerText = finalMonthlyPrice > 0 ? `USD ${finalMonthlyPrice}` : 'USD 0';
+      if (headerSetup) headerSetup.innerText = finalSetupPrice > 0 ? `USD ${finalSetupPrice}` : 'USD 0';
+
+      // Las tarjetas superiores reflejan el precio final del plan para el mercado seleccionado.
+      const fixedMarketPricesForCards = { pro: { 'Otros': 599 }, corporate: { 'Otros': 799, 'Perú': 449 } };
+      ['base','starter','grow','pro','corporate'].forEach(k => {
+        const cardEl = document.getElementById(`card-price-${k}`);
+        if (!cardEl) return;
+        const preset = PLAN_PRESETS[k];
+        const special = fixedMarketPricesForCards[k] && fixedMarketPricesForCards[k][market];
+        const cardPrice = special || preset.target_price;
+        cardEl.innerText = `USD ${cardPrice}`;
+      });
+      const marginPercent = calc.margPct;
+      const implTime = PRICING.impl_time[ia] || '1 Día Hábil';
+
+      document.getElementById('impl-time-badge').innerText = implTime;
+      document.getElementById('margin-cost-val').innerText = `$${totalDirectCost.toFixed(2)} USD`;
+      document.getElementById('margin-partner-val').innerText = `$${calc.partAmt.toFixed(2)} USD (${partnerCommPercent}%)`;
+      document.getElementById('current-margin-val').innerText = `$${calc.netG.toFixed(2)} USD (${marginPercent < -900 ? '0.0' : marginPercent.toFixed(1)}%)`;
+
+      const statusBadge = document.getElementById('margin-status-badge');
+      const btnPreview = document.getElementById('btn-preview-prop');
+      const btnCopy = document.getElementById('btn-copy-wpp');
+
+      if (marginPercent < 10 || finalMonthlyPrice <= 0) {
+        statusBadge.innerText = "ALERTA (<10%)";
+        statusBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30";
+        document.getElementById('current-margin-val').className = "font-bold text-red-400 font-mono";
+        document.getElementById('display-monthly-final').innerText = "NO PERMITIDO";
+        document.getElementById('display-setup-final').innerText = "NO PERMITIDO";
+        btnPreview.disabled = true;
+        btnPreview.classList.add('opacity-50', 'cursor-not-allowed');
+        btnCopy.disabled = true;
+        btnCopy.classList.add('opacity-50', 'cursor-not-allowed');
+      } else {
+        statusBadge.innerText = "OK";
+        statusBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+        document.getElementById('current-margin-val').className = "font-bold text-emerald-400 font-mono";
+        document.getElementById('display-monthly-final').innerText = `$${finalMonthlyPrice} USD`;
+        document.getElementById('display-setup-final').innerText = `$${finalSetupPrice} USD`;
+        btnPreview.disabled = false;
+        btnPreview.classList.remove('opacity-50', 'cursor-not-allowed');
+        btnCopy.disabled = false;
+        btnCopy.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+
+      document.getElementById('display-monthly-original').innerText = calc.totD > 0 ? `$${Math.floor(monthlyListPrice)}` : '';
+
+      let discLabelText = "";
+      if (calc.baseD > 0 && calc.extraD > 0) {
+        discLabelText = `${calc.baseD.toFixed(1)}% Desc. Plan + ${calc.extraD.toFixed(1)}% Desc. Especial FIT = ${calc.totD.toFixed(1)}% Total`;
+      } else if (calc.baseD > 0) {
+        discLabelText = `${calc.baseD.toFixed(1)}% Desc. Promocional de Plan Incluido`;
+      } else if (calc.extraD > 0) {
+        discLabelText = `${calc.extraD.toFixed(1)}% Descuento Especial FIT Aplicado`;
+      }
+      document.getElementById('display-monthly-discount-text').innerText = discLabelText;
+
+      document.getElementById('display-setup-original').innerText = setupBonifPercent > 0 ? `$${Math.floor(setupListPrice)}` : '';
+      document.getElementById('display-setup-bonif-text').innerText = setupBonifPercent > 0 ? `${setupBonifPercent}% Bonificado` : '';
+
+      const selectedExecKey = document.getElementById('seller-select').value;
+      const exec = EXECUTIVES[selectedExecKey] || EXECUTIVES.valeria;
+      const validityDays = parseInt(document.getElementById('quote-validity-days').value) || 7;
+
+      window.lastQuoteData = {
+        clientCompany: document.getElementById('client-company').value.trim(),
+        clientContact: document.getElementById('client-contact').value.trim(),
+        clientEmail: document.getElementById('client-email').value.trim(),
+        clientPhone: document.getElementById('client-phone').value.trim(),
+        validityDays, market, note: document.getElementById('quote-note')?.value.trim() || '', customTerm: document.getElementById('quote-term-note')?.value.trim() || '', hasExtras: extrasMonthlyList > 0,
+        sellerName: exec.name, sellerEmail: exec.email,
+        sellerPhone: document.getElementById('seller-phone').value || '',
+        activePlanKey: activePlanKey, planName: currentPlanName, iaLevel: ia, implTime: implTime,
+        lic, channels: activeChannels, channelNamesFormatted,
+        channelDetails: channelDetailParts, stdChannels, stdChannelCount,
+        wppLines, totalTkts, wppTkts, stdTkts,
+        autos, intEmail, intSheets, intTnPos, tnProds, intCustom,
+        isWppMkt, wppMktSends, plantillasMkt, plantillasUt, segHs,
+        capEquipoHs, capAdminHs, configInicial,
+        monthlyList: monthlyListPrice, monthlyFinal: finalMonthlyPrice,
+        monthlyDisc: calc.totD, baseDisc: calc.baseD, extraDisc: calc.extraD,
+        setupList: setupListPrice, setupFinal: finalSetupPrice, setupBonif: setupBonifPercent,
+        directCost: totalDirectCost, partnerCommAmt: calc.partAmt, partnerCommPct: partnerCommPercent,
+        netGain: calc.netG, marginPercent
+      };
+    }
+
+    function openClientProposalModal() {
+      recalculate();
+      const data = window.lastQuoteData;
+      if (!data || data.marginPercent < 10) return;
+
+      document.getElementById('prop-client-company').innerText = data.clientCompany || '';
+      document.getElementById('prop-client-contact').innerText = data.clientContact ? `Contacto: ${data.clientContact}` : '';
+      document.getElementById('prop-client-email').innerText = data.clientEmail ? `Email: ${data.clientEmail}` : '';
+      document.getElementById('prop-client-phone').innerText = data.clientPhone ? `Tel: ${data.clientPhone}` : '';
+
+      document.getElementById('prop-seller-name').innerText = data.sellerName;
+      document.getElementById('prop-seller-email').innerText = data.sellerEmail;
+      document.getElementById('prop-seller-phone').innerText = data.sellerPhone ? `Tel: ${data.sellerPhone}` : '';
+
+      document.getElementById('prop-date').innerText = `Fecha: ${new Date().toLocaleDateString()}`;
+      document.getElementById('prop-validity').innerText = `Validez: ${data.validityDays} Días`;
+
+      document.getElementById('prop-impl-time').innerText = data.implTime;
+
+      document.getElementById('prop-plan-header').innerText = `RESUMEN DE LA PROPUESTA BOTIAX: PLAN ${data.planName.toUpperCase()}${data.hasExtras ? ' + EXTRAS' : ''} | MERCADO ${data.market.toUpperCase()}`;
+
+      const noteBox = document.getElementById('prop-note-box');
+      const noteText = document.getElementById('prop-note-text');
+      noteText.innerText = data.note || '';
+      noteBox.classList.toggle('hidden', !data.note);
+      const customTermEl = document.getElementById('prop-custom-term');
+      customTermEl.innerText = data.customTerm || '';
+      customTermEl.classList.toggle('hidden', !data.customTerm);
+
+      document.getElementById('prop-monthly-price').innerText = `$${Math.floor(data.monthlyFinal)} USD`;
+      document.getElementById('prop-monthly-orig').innerText = data.monthlyDisc > 0 ? `$${Math.floor(data.monthlyList)} USD` : '';
+      
+      document.getElementById('prop-setup-price').innerText = `$${Math.floor(data.setupFinal)} USD`;
+      document.getElementById('prop-setup-orig').innerText = data.setupBonif > 0 ? `$${Math.floor(data.setupList)} USD` : '';
+
+      const baseBody = document.getElementById('prop-base-items-body');
+      baseBody.innerHTML = '';
+
+      const iaNames = { none: 'Sin Asistente IA', starter: 'Asistente IA Starter', grow: 'Asistente IA Grow', pro: 'Asistente IA Pro', corporate: 'Asistente IA Corporate' };
+      
+      baseBody.innerHTML += `<tr><td class="py-1 font-medium">Asistente Virtual</td><td class="py-1 text-right">${iaNames[data.iaLevel]}</td></tr>`;
+      baseBody.innerHTML += `<tr><td class="py-1 font-medium">Licencias de Agente / Usuario</td><td class="py-1 text-right">${data.lic} Licencias</td></tr>`;
+      
+      const formattedChannels = data.channelDetails && data.channelDetails.length ? data.channelDetails.join(', ') : 'Ninguno';
+      baseBody.innerHTML += `<tr><td class="py-1 font-medium">Canales</td><td class="py-1 text-right">${formattedChannels}</td></tr>`;
+
+      let convDetail = [];
+      if (data.stdTkts > 0) convDetail.push(`${data.stdTkts} estándar`);
+      if (data.wppTkts > 0) convDetail.push(`${data.wppTkts} WhatsApp API`);
+      baseBody.innerHTML += `<tr><td class="py-1 font-medium">Volumen Mensual de Conversaciones</td><td class="py-1 text-right">${data.totalTkts} conversaciones (${convDetail.join(' + ')})</td></tr>`;
+
+      if (data.autos > 0) {
+        baseBody.innerHTML += `<tr><td class="py-1 font-medium">Automatizaciones</td><td class="py-1 text-right">${data.autos} Flujos</td></tr>`;
+      }
+      if (data.intEmail > 0) {
+        baseBody.innerHTML += `<tr><td class="py-1 font-medium">Envío Correo desde Asistente IA</td><td class="py-1 text-right">${data.intEmail} Casillas</td></tr>`;
+      }
+      if (data.intSheets > 0) {
+        baseBody.innerHTML += `<tr><td class="py-1 font-medium">Integración Sheet / Excel Online</td><td class="py-1 text-right">${data.intSheets} Archivos</td></tr>`;
+      }
+      if (data.intTnPos > 0) {
+        baseBody.innerHTML += `<tr><td class="py-1 font-medium">Tienda Nube Posventa</td><td class="py-1 text-right">Módulo Activo</td></tr>`;
+      }
+      if (data.tnProds > 0) {
+        baseBody.innerHTML += `<tr><td class="py-1 font-medium">Tienda Nube Catálogo</td><td class="py-1 text-right">${data.tnProds} Productos</td></tr>`;
+      }
+      if (data.intCustom > 0) {
+        baseBody.innerHTML += `<tr><td class="py-1 font-medium">Integraciones a Medida</td><td class="py-1 text-right">${data.intCustom} Integraciones</td></tr>`;
+      }
+      if (data.isWppMkt) {
+        baseBody.innerHTML += `<tr><td class="py-1 font-medium">Módulo WhatsApp Marketing</td><td class="py-1 text-right">${data.wppMktSends} Envíos mensuales</td></tr>`;
+      }
+      if (data.plantillasMkt > 0) {
+        baseBody.innerHTML += `<tr><td class="py-1 font-medium">Plantillas Mkt Adicionales</td><td class="py-1 text-right">${data.plantillasMkt} Unidades</td></tr>`;
+      }
+      if (data.plantillasUt > 0) {
+        baseBody.innerHTML += `<tr><td class="py-1 font-medium">Plantillas Utility Adicionales</td><td class="py-1 text-right">${data.plantillasUt} Unidades</td></tr>`;
+      }
+      if (data.segHs > 0) {
+        baseBody.innerHTML += `<tr><td class="py-1 font-medium">Seguimiento de Plataforma</td><td class="py-1 text-right">${data.segHs} hs/mes</td></tr>`;
+      }
+
+      const baseFeaturesBox = document.getElementById('prop-base-features-box');
+      const baseFeaturesList = document.getElementById('prop-base-features-list');
+      
+      baseFeaturesBox.style.display = 'none';
+
+      let setupDetails = [];
+      if (data.configInicial) setupDetails.push("Configuración Inicial del Sistema");
+      if (data.iaLevel !== 'none') setupDetails.push(`Armado y Entrenamiento de Asistente IA (${data.iaLevel.toUpperCase()})`);
+      if (data.capEquipoHs > 0) setupDetails.push(`Capacitación Equipo (${data.capEquipoHs} hs)`);
+      if (data.capAdminHs > 0) setupDetails.push(`Capacitación Administradores (${data.capAdminHs} hs)`);
+
+      document.getElementById('prop-setup-items-text').innerText = setupDetails.length > 0 ? setupDetails.join(' • ') : "Setup Básico Incluido";
+
+      document.getElementById('client-modal').classList.remove('hidden');
+    }
+
+    function closeClientProposalModal() {
+      document.getElementById('client-modal').classList.add('hidden');
+    }
+
+    function printProposal() {
+      const data = window.lastQuoteData;
+      const clientName = data && data.clientCompany ? data.clientCompany : 'Cliente';
+      const today = new Date().toLocaleDateString().replace(/\//g, '-');
+      const originalTitle = document.title;
+      
+      document.title = `Cotización Botiax - ${clientName} - ${today}`;
+      
+      const modal = document.getElementById('client-modal');
+      const element = document.getElementById('printable-quote');
+      modal.classList.add('print-active-modal');
+      element.classList.add('print-active');
+      
+      const cleanup = () => {
+        element.classList.remove('print-active');
+        modal.classList.remove('print-active-modal');
+        document.title = originalTitle;
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      window.print();
+      // Algunos navegadores móviles no disparan afterprint.
+      setTimeout(cleanup, 2500);
+    }
+
+    function printTechBreakdown() {
+      const data = window.lastQuoteData;
+      const clientName = data && data.clientCompany ? data.clientCompany : 'Cliente';
+      const today = new Date().toLocaleDateString().replace(/\//g, '-');
+      const originalTitle = document.title;
+      
+      document.title = `Desglose Financiero - ${clientName} - ${today}`;
+      
+      const modal = document.getElementById('tech-modal');
+      const element = document.getElementById('printable-tech');
+      modal.classList.add('print-active-modal');
+      element.classList.add('print-active');
+      
+      const cleanup = () => {
+        element.classList.remove('print-active');
+        modal.classList.remove('print-active-modal');
+        document.title = originalTitle;
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      window.print();
+      // Algunos navegadores móviles no disparan afterprint.
+      setTimeout(cleanup, 2500);
+    }
+
+    function openTechBreakdownModal() {
+      recalculate();
+      const data = window.lastQuoteData;
+      if (!data) return;
+
+      document.getElementById('tb-plan-title').innerText = `Cotizando: ${data.planName} (Mercado: ${data.market} · Nivel IA: ${data.iaLevel.toUpperCase()})`;
+
+      document.getElementById('tb-client-company').innerText = data.clientCompany || 'No especificado';
+      document.getElementById('tb-client-contact').innerText = data.clientContact || 'No especificado';
+      document.getElementById('tb-client-email').innerText = data.clientEmail || 'Sin email';
+      document.getElementById('tb-client-phone').innerText = data.clientPhone || 'Sin teléfono';
+
+      document.getElementById('tb-seller-name').innerText = data.sellerName;
+      document.getElementById('tb-quote-date').innerText = new Date().toLocaleDateString();
+      document.getElementById('tb-quote-validity').innerText = `${data.validityDays} Días`;
+
+      document.getElementById('tb-monthly-list').innerText = `$${data.monthlyList.toFixed(2)} USD`;
+      document.getElementById('tb-monthly-disc').innerText = `${data.monthlyDisc.toFixed(1)}%`;
+      document.getElementById('tb-monthly-final').innerText = `$${data.monthlyFinal.toFixed(2)} USD`;
+      document.getElementById('tb-monthly-cost').innerText = `$${data.directCost.toFixed(2)} USD`;
+      document.getElementById('tb-partner-comm').innerText = `$${data.partnerCommAmt.toFixed(2)} USD (${data.partnerCommPct}%)`;
+      document.getElementById('tb-monthly-gain').innerText = `$${data.netGain.toFixed(2)} USD (${data.marginPercent < -900 ? '0.0' : data.marginPercent.toFixed(1)}% Margen)`;
+
+      document.getElementById('tb-setup-list').innerText = `$${data.setupList.toFixed(2)} USD`;
+      document.getElementById('tb-setup-bonif').innerText = `${data.setupBonif}%`;
+      document.getElementById('tb-setup-final').innerText = `$${data.setupFinal.toFixed(2)} USD`;
+      document.getElementById('tb-impl-time').innerText = data.implTime;
+
+      const tbody = document.getElementById('tb-cost-matrix-body');
+      tbody.innerHTML = '';
+
+      const itemsMatrix = [];
+      const hasIa = data.iaLevel !== 'none';
+
+      if (hasIa) {
+        itemsMatrix.push({ name: `Asistente Virtual IA (${data.iaLevel.toUpperCase()})`, qty: 1, costU: 0, priceU: PRICING.ia_level[data.iaLevel] });
+      }
+      itemsMatrix.push({ name: 'Licencias de Agente / Usuario', qty: data.lic, costU: 0, priceU: PRICING.licencia });
+      itemsMatrix.push({ name: 'Canales Standard', qty: data.stdChannelCount, costU: 0, priceU: 25 });
+      itemsMatrix.push({ name: 'Líneas WhatsApp', qty: data.wppLines, costU: 0, priceU: 25 });
+
+      if (data.wppTkts > 0) {
+        const rate = hasIa
+          ? { cost: MARKET_RATES[data.market].wppIaCost, price: MARKET_RATES[data.market].wppIaPrice }
+          : { cost: MARKET_RATES[data.market].wppNoIaCost, price: MARKET_RATES[data.market].wppNoIaPrice };
+        itemsMatrix.push({ name: `Conversaciones WhatsApp API (${data.market})`, qty: data.wppTkts, costU: rate.cost, priceU: rate.price });
+      }
+      if (data.stdTkts > 0) {
+        const rate = hasIa
+          ? { cost: MARKET_RATES[data.market].stdIaCost, price: MARKET_RATES[data.market].stdIaPrice }
+          : { cost: MARKET_RATES[data.market].stdNoIaCost, price: MARKET_RATES[data.market].stdNoIaPrice };
+        itemsMatrix.push({ name: `Conversaciones Estándar (${data.market})`, qty: data.stdTkts, costU: rate.cost, priceU: rate.price });
+      }
+      if (data.autos > 0) {
+        itemsMatrix.push({ name: 'Automatizaciones', qty: data.autos, costU: 0, priceU: PRICING.auto_unit });
+      }
+      if (data.intEmail > 0) {
+        itemsMatrix.push({ name: 'Envío Correo desde Asistente IA', qty: data.intEmail, costU: 0, priceU: PRICING.int_correo });
+      }
+      if (data.intSheets > 0) {
+        itemsMatrix.push({ name: 'Integración Sheet / Excel Online', qty: data.intSheets, costU: 0, priceU: PRICING.int_sheets });
+      }
+      if (data.isWppMkt) {
+        itemsMatrix.push({ name: 'Módulo WhatsApp Marketing', qty: 1, costU: 100 * MARKET_RATES[data.market].plantillaMktCost, priceU: 15 });
+        if (data.wppMktSends > 100) {
+          const extra = data.wppMktSends - 100;
+          itemsMatrix.push({ name: 'Envíos Salientes WPP Mkt Extra', qty: extra, costU: MARKET_RATES[data.market].plantillaMktCost, priceU: MARKET_RATES[data.market].plantillaMktPrice });
+        }
+      }
+      if (data.segHs > 0) {
+        itemsMatrix.push({ name: 'Seguimiento de Plataforma', qty: data.segHs, costU: 0, priceU: PRICING.seguimiento_hs });
+      }
+
+      itemsMatrix.forEach(i => {
+        const costTot = i.qty * i.costU;
+        const priceTot = i.qty * i.priceU;
+        const marginU = priceTot > 0 ? ((priceTot - costTot) / priceTot) * 100 : 100;
+
+        tbody.innerHTML += `
+          <tr>
+            <td class="p-2 font-medium">${i.name}</td>
+            <td class="p-2 text-center font-mono">${i.qty}</td>
+            <td class="p-2 text-right font-mono">$${i.costU.toFixed(4)}</td>
+            <td class="p-2 text-right font-mono text-red-400">$${costTot.toFixed(2)}</td>
+            <td class="p-2 text-right font-mono">$${i.priceU.toFixed(4)}</td>
+            <td class="p-2 text-right font-mono text-amber-500">$${priceTot.toFixed(2)}</td>
+            <td class="p-2 text-center font-mono font-bold text-emerald-400">${marginU.toFixed(1)}%</td>
+          </tr>
+        `;
+      });
+
+      document.getElementById('tech-modal').classList.remove('hidden');
+    }
+
+    function closeTechBreakdownModal() {
+      document.getElementById('tech-modal').classList.add('hidden');
+    }
+
+    function copyQuickSummary() {
+      recalculate();
+      const data = window.lastQuoteData;
+      if (!data || data.marginPercent < 10) return;
+
+      const iaNames = { none: 'Sin IA', starter: 'Starter', grow: 'Grow', pro: 'Pro', corporate: 'Corporate' };
+
+      let summaryText = `*PROPUESTA COMERCIAL BOTIAX IA*\n`;
+      summaryText += `----------------------------------------\n`;
+      if (data.clientCompany) summaryText += `*Empresa:* ${data.clientCompany}\n`;
+      if (data.clientContact) summaryText += `*Contacto:* ${data.clientContact}\n`;
+      summaryText += `*Plan Seleccionado:* ${data.planName}\n`;
+      summaryText += `*Mercado Destino:* ${data.market}\n\n`;
+
+      summaryText += `*DETALLE DEL SERVICIO:*\n`;
+      summaryText += `• Asistente Virtual: ${iaNames[data.iaLevel] || 'Sin IA'}\n`;
+      summaryText += `• Licencias de Agente: ${data.lic}\n`;
+
+      if (data.channelDetails && data.channelDetails.length) {
+        summaryText += `• Canales: ${data.channelDetails.join(', ')}\n`;
+      }
+
+      summaryText += `• Conversaciones Totales: ${data.totalTkts}/mes\n`;
+      if (data.stdTkts > 0) summaryText += `   - Bolsa estándar compartida: ${data.stdTkts}\n`;
+      if (data.wppTkts > 0) summaryText += `   - WhatsApp API: ${data.wppTkts}\n`;
+
+      if (data.autos > 0) summaryText += `• Automatizaciones: ${data.autos} flujos\n`;
+
+      let integrationsList = [];
+      if (data.intEmail > 0) integrationsList.push(`${data.intEmail} Email`);
+      if (data.intSheets > 0) integrationsList.push(`${data.intSheets} Google Sheets`);
+      if (data.intTnPos > 0) integrationsList.push(`Tienda Nube Posventa`);
+      if (data.tnProds > 0) integrationsList.push(`Tienda Nube Catálogo (${data.tnProds} prods)`);
+      if (data.intCustom > 0) integrationsList.push(`${data.intCustom} A Medida`);
+      if (integrationsList.length > 0) summaryText += `• Integraciones: ${integrationsList.join(', ')}\n`;
+
+      if (data.isWppMkt) summaryText += `• WhatsApp MKT: ${data.wppMktSends} envíos/mes\n`;
+      if (data.plantillasMkt > 0) summaryText += `• Plantillas MKT Extra: ${data.plantillasMkt} u.\n`;
+      if (data.plantillasUt > 0) summaryText += `• Plantillas Utility Extra: ${data.plantillasUt} u.\n`;
+      if (data.segHs > 0) summaryText += `• Seguimiento Plataforma: ${data.segHs} hs/mes\n`;
+
+      let setupItems = [];
+      if (data.configInicial) setupItems.push("Config. Inicial");
+      if (data.iaLevel !== 'none') setupItems.push(`Entrenamiento IA (${data.iaLevel.toUpperCase()})`);
+      if (data.capEquipoHs > 0) setupItems.push(`Capacitación Equipo (${data.capEquipoHs} hs)`);
+      if (data.capAdminHs > 0) setupItems.push(`Capacitación Admin (${data.capAdminHs} hs)`);
+
+      summaryText += `\n*SETUP E IMPLEMENTACIÓN:*\n`;
+      summaryText += `• Componentes: ${setupItems.length > 0 ? setupItems.join(' • ') : 'Setup estándar'}\n`;
+      summaryText += `• Tiempo de Implementación: ${data.implTime}\n`;
+
+      if (data.note) summaryText += `\n*NOTA COMERCIAL:*\n${data.note}\n`;
+
+      summaryText += `\n*INVERSIÓN:*\n`;
+      summaryText += `• *Inversión Mensual:* $${Math.floor(data.monthlyFinal)} USD`;
+      if (data.monthlyDisc > 0) summaryText += ` _(${data.monthlyDisc.toFixed(1)}% desc. total aplicado)_`;
+      summaryText += `\n`;
+      summaryText += `• *Setup Inicial (Pago Único):* $${Math.floor(data.setupFinal)} USD`;
+      if (data.setupBonif > 0) summaryText += ` _(${data.setupBonif}% bonificado)_`;
+      summaryText += `\n\n----------------------------------------\n`;
+      summaryText += `*Validez de la oferta:* ${data.validityDays} días\n`;
+      summaryText += `*Asesor Comercial:* ${data.sellerName} (${data.sellerEmail})`;
+      if (data.sellerPhone) summaryText += ` | Tel: ${data.sellerPhone}`;
+
+      navigator.clipboard.writeText(summaryText).then(() => {
+        alert("Resumen detallado de cotización copiado al portapapeles para WhatsApp.");
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = summaryText;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+        alert("Resumen detallado de cotización copiado al portapapeles para WhatsApp.");
+      });
+    }
+
+    function enhanceNumberInputs() {
+      const ids = [
+        'qty-licencias','qty-chan-webchat','qty-chan-ig','qty-chan-fb','qty-chan-email','qty-chan-api','qty-chan-wpp',
+        'qty-auto','qty-int-email','qty-int-sheets','qty-int-tn-posventa','qty-tn-prods','qty-int-custom',
+        'qty-cap-equipo','qty-cap-admin','qty-plantillas-mkt','qty-plantillas-ut','qty-wpp-mkt-sends'
+      ];
+      ids.forEach(id => {
+        const input = document.getElementById(id);
+        if (!input || input.closest('.number-stepper')) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'number-stepper';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const controls = document.createElement('div');
+        controls.className = 'number-stepper-controls';
+        const up = document.createElement('button');
+        up.type = 'button'; up.title = 'Aumentar'; up.innerHTML = '▲';
+        const down = document.createElement('button');
+        down.type = 'button'; down.title = 'Disminuir'; down.innerHTML = '▼';
+        const step = () => parseFloat(input.step || '1') || 1;
+        const min = () => input.min === '' ? -Infinity : parseFloat(input.min);
+        const max = () => input.max === '' ? Infinity : parseFloat(input.max);
+        const change = delta => {
+          let v = parseFloat(input.value) || 0;
+          v = Math.min(max(), Math.max(min(), v + delta * step()));
+          input.value = String(v);
+          input.dispatchEvent(new Event('input', {bubbles:true}));
+          input.dispatchEvent(new Event('change', {bubbles:true}));
+        };
+        up.onclick = () => change(1); down.onclick = () => change(-1);
+        controls.append(up, down); wrap.appendChild(controls);
+      });
+    }
+
+    function syncStepperDisabledState() {
+      const wppModule = document.getElementById('chk-wpp-mkt');
+      const sends = document.getElementById('qty-wpp-mkt-sends');
+      if (wppModule && sends) {
+        const wrap = sends.closest('.number-stepper');
+        const disabled = !wppModule.checked || wppModule.disabled;
+        sends.disabled = disabled;
+        if (wrap) wrap.classList.toggle('disabled-stepper', disabled);
+      }
+    }
+
+    function initializeCalculatorUI() {
+      enhanceNumberInputs();
+      syncStepperDisabledState();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeCalculatorUI();
+      applyPlan('custom');
+      syncWppMarketingVisual();
+      initializeCalculatorUI();
+    });
+
+    window.addEventListener('load', () => {
+      initializeCalculatorUI();
+      syncStepperDisabledState();
+    });
+  </script>
+</body>
+</html>
